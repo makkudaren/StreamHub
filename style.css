@@ -906,6 +906,12 @@ body::after {
     .search-input { width: 160px; }
     .search-input:focus { width: 180px; }
     
+    /* Force exactly 2 columns for media cards on mobile */
+    .media-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px; /* Tighter gap so the cards aren't squished */
+    }
+    
     .season-episode-layout { flex-direction: column; }
     .season-column { flex: none; width: 100%; }
     
