@@ -1,92 +1,142 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StreamHub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        /* Hide scrollbar for cleaner UI */
-        ::-webkit-scrollbar { display: none; }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-950 text-white min-h-screen font-sans">
+<body>
 
     <!-- Navigation -->
-    <nav class="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row gap-4 justify-between items-center">
-            <div class="flex items-center gap-2 cursor-pointer" onclick="showDashboard()">
-                <i data-lucide="play-circle" class="text-red-600 w-8 h-8"></i>
-                <span class="text-xl font-bold tracking-wider">StreamHub</span>
-            </div>
-            
-            <div class="flex items-center gap-4 w-full sm:w-auto justify-end">
-                <!-- Search Input -->
-                <div class="relative flex items-center w-full sm:w-auto">
-                    <i data-lucide="search" class="absolute left-3 w-5 h-5 text-gray-400"></i>
-                    <input 
-                        type="text" 
-                        id="search-input" 
-                        placeholder="Search movies & TV..." 
-                        class="bg-gray-800 text-white border border-gray-700 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:border-red-600 transition-colors w-full sm:w-64">
+    <nav class="glass-nav glass-panel">
+        <div class="nav-inner">
+
+            <!-- Logo -->
+            <div class="nav-logo" onclick="showDashboard()">
+                <div class="logo-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5,3 19,12 5,21"/>
+                    </svg>
                 </div>
-                <i data-lucide="user" class="w-5 h-5 text-gray-400 hover:text-white cursor-pointer hidden sm:block"></i>
+                <span class="logo-text">StreamHub</span>
             </div>
+
+            <!-- Tab Pills -->
+            <div class="nav-center" id="tab-container">
+                <button id="tab-movie" class="tab-pill active" onclick="switchTab('movie')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                    Movies
+                </button>
+                <button id="tab-tv" class="tab-pill" onclick="switchTab('tv')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                    TV Shows
+                </button>
+            </div>
+
+            <!-- Nav Right -->
+            <div class="nav-right">
+                <div class="search-wrapper">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="search-input" placeholder="Search movies &amp; TV…" class="search-input glass-input" autocomplete="off">
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+                <div class="avatar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+            </div>
+
         </div>
     </nav>
 
-    <!-- Main Dashboard View -->
-    <main id="dashboard-view" class="max-w-7xl mx-auto p-4 py-8">
-        <!-- Tab Content Toggles (Hidden when searching) -->
-        <div id="tab-container" class="flex gap-4 border-b border-gray-800 mb-6 pb-2">
-            <button id="tab-movie" onclick="switchTab('movie')" class="flex items-center gap-2 text-lg font-medium border-b-2 border-red-600 pb-2 px-1 text-white transition-all">
-                <i data-lucide="film" class="w-5 h-5"></i>
-                <span>Movies</span>
-            </button>
-            <button id="tab-tv" onclick="switchTab('tv')" class="flex items-center gap-2 text-lg font-medium border-b-2 border-transparent pb-2 px-1 text-gray-400 hover:text-white transition-all">
-                <i data-lucide="tv" class="w-5 h-5"></i>
-                <span>TV Shows</span>
-            </button>
+    <!-- Dashboard View -->
+    <main id="dashboard-view" class="page-view">
+
+        <div class="dashboard-header">
+            <p class="section-eyebrow">
+                <span class="eyebrow-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                </span>
+                <span id="grid-eyebrow">Trending Movies</span>
+            </p>
+            <h2 id="grid-title" class="dashboard-title">Trending Movies</h2>
         </div>
 
-        <div class="flex items-center gap-2 mb-6">
-            <i id="grid-icon" data-lucide="trending-up" class="w-6 h-6 text-red-600"></i>
-            <h2 id="grid-title" class="text-2xl font-semibold">Trending Movies</h2>
+        <div id="movie-grid" class="media-grid">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
         </div>
-        
-        <!-- Grid Structure -->
-        <div id="movie-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            <!-- Dynamic Injection -->
-        </div>
+
     </main>
 
     <!-- Player View -->
-    <main id="player-view" class="max-w-7xl mx-auto p-4 py-8 hidden">
-        <button onclick="showDashboard()" class="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
-            <i data-lucide="arrow-left" class="w-5 h-5"></i>
-            <span>Back to Browse</span>
+    <main id="player-view" class="page-view hidden">
+
+        <button onclick="showDashboard()" class="back-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            Back to Browse
         </button>
 
-        <div class="bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800">
-            <iframe 
+        <!-- Player -->
+        <div class="player-shell">
+            <div class="player-chrome-top">
+                <div class="chrome-dot red"></div>
+                <div class="chrome-dot yellow"></div>
+                <div class="chrome-dot green"></div>
+                <span class="chrome-label" id="chrome-label">Loading stream…</span>
+            </div>
+            <iframe
                 id="vidking-player"
-                src="" 
-                width="100%" 
-                height="600" 
-                frameborder="0" 
+                src=""
+                frameborder="0"
                 allowfullscreen
-                class="w-full aspect-video">
+                allow="autoplay; fullscreen">
             </iframe>
         </div>
 
-        <div class="mt-6 bg-gray-900 border border-gray-800 p-4 rounded-lg flex items-start gap-4">
-            <i data-lucide="activity" class="w-6 h-6 text-green-500 mt-1"></i>
-            <div>
-                <h3 class="font-semibold mb-1">Watch Progress Debugger</h3>
-                <p id="progress-log" class="text-gray-400 font-mono text-sm">Waiting for playback data...</p>
+        <!-- TV Controls -->
+        <div id="tv-controls" class="glass-panel hidden" style="border-radius:24px; padding:24px; margin-bottom:24px;">
+            <div class="panel-header">
+                <span class="panel-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </span>
+                Seasons &amp; Episodes
+            </div>
+            <div class="season-episode-layout">
+                <div class="season-column">
+                    <label class="field-label">Select Season</label>
+                    <div id="season-list" class="season-scroll-list"></div>
+                </div>
+                <div class="episode-column">
+                    <label class="field-label">Select Episode</label>
+                    <div id="episode-list" class="episode-grid"></div>
+                </div>
             </div>
         </div>
+
+        <!-- Progress Monitor -->
+        <div class="glass-panel progress-panel" style="border-radius:16px; padding:20px;">
+            <div class="progress-panel-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="progress-content">
+                <p class="progress-title">Watch Progress Debugger</p>
+                <p id="progress-log" class="progress-log">Waiting for playback data…</p>
+            </div>
+        </div>
+
     </main>
 
     <script src="app.js"></script>
