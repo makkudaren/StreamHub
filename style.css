@@ -898,6 +898,10 @@ body::after {
 @media (max-width: 768px) {
     .page-view { padding: 24px 16px 80px; }
     .dashboard-title { font-size: 2.2rem; }
+    #vidking-player {
+        aspect-ratio: auto;
+        min-height: 520px;
+    }
 }
 
 /* Mobile Screens */
@@ -907,10 +911,9 @@ body::after {
     .search-input { width: 160px; }
     .search-input:focus { width: 180px; }
     
-    /* Force exactly 2 columns for media cards on mobile */
     .media-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 12px; /* Tighter gap so the cards aren't squished */
+        gap: 12px; 
     }
     
     .season-episode-layout { flex-direction: column; }
