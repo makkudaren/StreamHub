@@ -256,7 +256,8 @@ function playMovie(id, title, posterPath = ''){
 
 async function openDetail(id,type){
   const overlay=document.getElementById('detailModal');
-  overlay.classList.add('open');document.body.style.overflow='hidden';
+  overlay.classList.add('open');
+  if (window.innerWidth <= 860) createBackButton('modal');
   currentModal={id,type};
   document.getElementById('modalTitle').textContent='Loading...';
   document.getElementById('modalMeta').innerHTML='';
@@ -598,6 +599,18 @@ function removeFromRecent(e, id) {
     showRecent();
   }
   showToast("Removed from history");
+}
+
+function createBackButton(type) {
+  const btn = document.createElement('button');
+  btn.className = 'back-btn-float';
+  btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>`;
+  btn.onclick = () => {
+    if (type === 'modal') closeDetailModalBtn();
+    else closePlayerModalBtn();
+    document.body.removeChild(btn);
+  };
+  document.body.appendChild(btn);
 }
 
 async function init(){
