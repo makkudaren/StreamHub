@@ -81,7 +81,6 @@ body{
   opacity: 0.4;
   mix-blend-mode: screen;
   transition: all 2s ease-in-out;
-  will-change: transform;
 }
 
 .orb1 {
@@ -739,11 +738,6 @@ main {
 }
 
 @media(max-width: 860px) {
-  :root {
-    --blur: blur(8px);
-    --blur-sm: blur(4px);
-  }
-
   nav {
     position: absolute;
     height: auto;
@@ -755,7 +749,6 @@ main {
     left: 8px; 
     right: 8px;
     width: auto;
-    z-index: 1000;
   }
   
   .nav-logo { flex: 1; }
@@ -779,7 +772,7 @@ main {
   .modal-title { font-size: 32px; }
   .player-wrap {
     aspect-ratio: 9/16;
-    max-height: 90vh;
+    max-height: 70vh;
   }
   .search-results { padding: calc(var(--nav-h) + 50px) 16px 60px; }
 
@@ -787,7 +780,6 @@ main {
      opacity: 1;
      transform: scale(1);
   }
-  .orb { animation: none !important; filter: blur(60px); opacity: 0.2; }
 }
 
 @media(max-width: 600px) {

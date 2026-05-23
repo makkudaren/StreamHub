@@ -226,8 +226,7 @@ async function setHero(idx){
   document.querySelectorAll('.hero-dot-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
   const bg=document.getElementById('heroBg');
   if(heroItem.backdrop_path){
-    const heroSize = window.innerWidth <= 860 ? 'w780' : 'original';
-    bg.style.backgroundImage=`url(${IMG}${heroSize}${heroItem.backdrop_path})`;
+    bg.style.backgroundImage=`url(${IMG}original${heroItem.backdrop_path})`;
     setTimeout(()=>bg.classList.add('loaded'),50);
   }
   document.getElementById('heroTitle').textContent=heroItem.title||heroItem.name||'';
@@ -431,7 +430,6 @@ function openPlayer(src,label){
   document.getElementById('playerTitleText').textContent=label;
   document.getElementById('playerModal').classList.add('open');
   document.body.style.overflow='hidden';
-  if (window.innerWidth <= 860) createBackButton('player');
   window.addEventListener('message',handlePlayerMessage);
   const params = new URLSearchParams(window.location.search);
   if(currentPlayerSeason) params.set('s', currentPlayerSeason);
@@ -606,10 +604,7 @@ function removeFromRecent(e, id) {
 function createBackButton(type) {
   const btn = document.createElement('button');
   btn.className = 'back-btn-float';
-  btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="19" y1="12" x2="9" y2="12"/>
-                        <path d="M15 18l-6-6 6-6"/>
-                    </svg>`;
+  btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>`;
   btn.onclick = () => {
     if (type === 'modal') closeDetailModalBtn();
     else closePlayerModalBtn();
