@@ -252,7 +252,6 @@ function playMovie(id, title, posterPath = ''){
 async function openDetail(id,type){
   const overlay=document.getElementById('detailModal');
   overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
   if (window.innerWidth <= 860) createBackButton('modal');
   currentModal={id,type};
   document.getElementById('modalTitle').textContent='Loading...';
