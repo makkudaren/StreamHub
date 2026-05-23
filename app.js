@@ -73,13 +73,13 @@ window.addEventListener('scroll', () => {
   document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 20);
 });
 
-(function checkUrlParams() {
+document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   const movie = params.get('movie');
   const tv = params.get('tv');
   if (movie) openDetail(movie, 'movie');
   else if (tv) openDetail(tv, 'tv');
-})();
+});
 
 function setActiveNav(el){
   document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
