@@ -81,6 +81,7 @@ body{
   opacity: 0.4;
   mix-blend-mode: screen; /* Makes colors blend artistically where they overlap */
   transition: all 2s ease-in-out;
+  will-change: transform;
 }
 
 .orb1 {
@@ -704,18 +705,26 @@ main {
 
 .remove-recent-btn:hover {
   background: var(--accent);
-  border-color: rgba(232, 39, 26, 0.5);
+  border-color: rgba(192, 146, 142, 0.5);
   transform: scale(1.1) !important;
 }
 
+button, .card, .nav-link, .btn, .row-arrow, .episode-card {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 @media(max-width: 860px) {
+  :root {
+    --blur: blur(8px);
+    --blur-sm: blur(4px);
+  }
+
   .remove-recent-btn {
      opacity: 1;
      transform: scale(1);
   }
-}
 
-@media(max-width: 860px) {
   nav {
     position: absolute;
     height: auto;
@@ -727,6 +736,7 @@ main {
     left: 8px; 
     right: 8px;
     width: auto;
+    z-index: 1000;
   }
   
   .nav-logo { flex: 1; }
@@ -750,6 +760,7 @@ main {
   .modal-title { font-size: 32px; }
   .player-wrap { width: 98%; }
   .search-results { padding: calc(var(--nav-h) + 50px) 16px 60px; }
+  .orb { animation: none !important; filter: blur(60px); opacity: 0.2; }
 }
 
 @media(max-width: 600px) {

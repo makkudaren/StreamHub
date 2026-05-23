@@ -93,7 +93,7 @@ async function tmdb(path,params={}){
   return r.json();
 }
 
-function skeletonRow(row,n=8){
+function skeletonRow(row, n = window.innerWidth <= 500 ? 4 : 8){
   row.innerHTML=[...Array(n)].map(()=>`
     <div class="skel-card">
       <div class="skeleton skel-poster"></div>
@@ -212,7 +212,8 @@ async function setHero(idx){
   document.querySelectorAll('.hero-dot-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
   const bg=document.getElementById('heroBg');
   if(heroItem.backdrop_path){
-    bg.style.backgroundImage=`url(${IMG}original${heroItem.backdrop_path})`;
+    const heroSize = window.innerWidth <= 860 ? 'w780' : 'original';
+    bg.style.backgroundImage=`url(${IMG}${heroSize}${heroItem.backdrop_path})`;
     setTimeout(()=>bg.classList.add('loaded'),50);
   }
   document.getElementById('heroTitle').textContent=heroItem.title||heroItem.name||'';
