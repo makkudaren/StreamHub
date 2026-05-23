@@ -346,6 +346,7 @@ main {
   display:flex;gap:14px;overflow-x:auto;
   padding:40px;scroll-behavior:smooth;
   -webkit-overflow-scrolling:touch;
+  touch-action: pan-x;
 }
 .row::-webkit-scrollbar{display:none}
 .row-arrow{
@@ -444,6 +445,7 @@ main {
   -webkit-backdrop-filter:blur(16px) saturate(120%);
   opacity:0;pointer-events:none;
   transition:opacity 0.35s;
+  touch-action: none;
 }
 .modal-overlay.open{opacity:1;pointer-events:all}
 .modal{
@@ -458,6 +460,7 @@ main {
   overflow-y:auto;
   -webkit-overflow-scrolling: touch;
   transform:scale(0.94) translateY(24px);
+  touch-action: pan-y;
   transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);
   box-shadow:0 40px 100px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 1px rgba(255,255,255,0.04);
 }
@@ -741,10 +744,10 @@ main {
   transform: scale(1.1) !important;
 }
 
-/* button, .nav-link, .btn, .row-arrow {
+button, .nav-link, .btn, .row-arrow {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-} */
+}
 
 .card, .episode-card {
   touch-action: auto; 
