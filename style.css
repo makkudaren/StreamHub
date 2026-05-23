@@ -738,11 +738,6 @@ main {
   transform: scale(1.1) !important;
 }
 
-button, .card, .nav-link, .btn, .row-arrow, .episode-card {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
 @media(max-width: 860px) {
   :root {
     --blur: blur(8px);
@@ -793,7 +788,6 @@ button, .card, .nav-link, .btn, .row-arrow, .episode-card {
      transform: scale(1);
   }
   .orb { animation: none !important; filter: blur(60px); opacity: 0.2; }
-
 }
 
 @media(max-width: 600px) {
