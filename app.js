@@ -258,6 +258,7 @@ function playMovie(id, title, posterPath = ''){
 async function openDetail(id,type){
   const overlay=document.getElementById('detailModal');
   overlay.classList.add('open');
+  updateModalLock();
   if (window.innerWidth <= 860) createBackButton('modal');
   currentModal={id,type};
   document.getElementById('modalTitle').textContent='Loading...';
@@ -405,6 +406,7 @@ function closeDetailModalBtn(){
   document.getElementById('detailModal').classList.remove('open');
   document.body.style.overflow='';
   window.history.pushState(null, '', window.location.pathname);
+  updateModalLock();
 }
 
 function playMedia(id,type,title,s,e){
@@ -430,13 +432,9 @@ function openPlayer(src,label){
   document.getElementById('playerFrame').src=src;
   document.getElementById('playerTitleText').textContent=label;
   document.getElementById('playerModal').classList.add('open');
-  document.body.style.overflow='hidden';
-  window.addEventListener('message',handlePlayerMessage);
-  const params = new URLSearchParams(window.location.search);
-  if(currentPlayerSeason) params.set('s', currentPlayerSeason);
-  if(currentPlayerEpisode) params.set('e', currentPlayerEpisode);
-  params.set('play', 'true');
-  window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+  updateModalLock();
+  
+  if (window.innerWidth <= 860) createBackButton('player');
 }
 
 function closePlayerModal(e){if(e.target===e.currentTarget)closePlayerModalBtn()}
@@ -449,6 +447,7 @@ function closePlayerModalBtn(){
   params.delete('s');
   params.delete('e');
   window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+  updateModalLock();
 }
 
 function handlePlayerMessage(event){
@@ -612,6 +611,13 @@ function createBackButton(type) {
     document.body.removeChild(btn);
   };
   document.body.appendChild(btn);
+}
+
+function updateModalLock() {
+  const isModalOpen = document.getElementById('detailModal').classList.contains('open') || 
+                      document.getElementById('playerModal').classList.contains('open');
+  if (isModalOpen) document.body.classList.add('has-modal');
+  else document.body.classList.remove('has-modal');
 }
 
 async function init(){

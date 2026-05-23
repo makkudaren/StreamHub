@@ -449,6 +449,7 @@ main {
 .modal{
   background:rgba(15,18,35,0.7);
   backdrop-filter:blur(40px) saturate(180%);
+  overscroll-behavior: contain;
   -webkit-backdrop-filter:blur(40px) saturate(180%);
   border:1px solid var(--glass-border);
   border-radius:var(--radius-xl);
@@ -742,6 +743,13 @@ main {
 button, .card, .nav-link, .btn, .row-arrow, .episode-card {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+
+body.has-modal #mainNav,
+body.has-modal #homeContent,
+body.has-modal #searchResults {
+  pointer-events: none !important;
+  user-select: none !important;
 }
 
 @media(max-width: 860px) {
