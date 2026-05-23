@@ -73,13 +73,14 @@ window.addEventListener('scroll', () => {
   document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 20);
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+// Run URL param check once on page load instead:
+(function checkUrlParams() {
   const params = new URLSearchParams(window.location.search);
   const movie = params.get('movie');
   const tv = params.get('tv');
   if (movie) openDetail(movie, 'movie');
   else if (tv) openDetail(tv, 'tv');
-});
+})();
 
 function setActiveNav(el){
   document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
@@ -101,7 +102,7 @@ async function tmdb(path,params={}){
   return r.json();
 }
 
-function skeletonRow(row, n = window.innerWidth <= 500 ? 4 : 8){
+function skeletonRow(row,n=8){
   row.innerHTML=[...Array(n)].map(()=>`
     <div class="skel-card">
       <div class="skeleton skel-poster"></div>
@@ -252,7 +253,6 @@ function playMovie(id, title, posterPath = ''){
 async function openDetail(id,type){
   const overlay=document.getElementById('detailModal');
   overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
   if (window.innerWidth <= 860) createBackButton('modal');
   currentModal={id,type};
   document.getElementById('modalTitle').textContent='Loading...';
