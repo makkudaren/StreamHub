@@ -71,20 +71,6 @@ function toggleTheme(){
 
 window.addEventListener('scroll',()=>{
   document.getElementById('mainNav').classList.toggle('scrolled',window.scrollY>20);
-  const params = new URLSearchParams(window.location.search);
-  const movie = params.get('movie');
-  const tv = params.get('tv');
-  if (movie) openDetail(movie, 'movie');
-  else if (tv) openDetail(tv, 'tv');
-  if (params.get('play') === 'true' && currentModal) {
-    const s = params.get('s');
-    const e = params.get('e');
-    if (currentModal.type === 'movie') {
-      playMovie(currentModal.id, 'Media');
-    } else {
-      playEpisode(currentModal.id, s, e, 'Episode');
-    }
-  }
 });
 
 function setActiveNav(el){
@@ -256,8 +242,7 @@ function playMovie(id, title, posterPath = ''){
 
 async function openDetail(id,type){
   const overlay=document.getElementById('detailModal');
-  overlay.classList.add('open');
-  if (window.innerWidth <= 860) createBackButton('modal');
+  overlay.classList.add('open');document.body.style.overflow='hidden';
   currentModal={id,type};
   document.getElementById('modalTitle').textContent='Loading...';
   document.getElementById('modalMeta').innerHTML='';
@@ -342,8 +327,6 @@ async function openDetail(id,type){
   }catch{
     document.getElementById('modalTitle').textContent='Failed to load.';
   }
-  const newUrl = `${window.location.pathname}?${type}=${id}`;
-  window.history.pushState({modal: {id, type}}, '', newUrl);
 }
 
 async function loadSeasons(tvId,seasons,show){
@@ -403,7 +386,6 @@ function closeDetailModal(e){if(e.target===e.currentTarget)closeDetailModalBtn()
 function closeDetailModalBtn(){
   document.getElementById('detailModal').classList.remove('open');
   document.body.style.overflow='';
-  window.history.pushState(null, '', window.location.pathname);
 }
 
 function playMedia(id,type,title,s,e){
@@ -431,11 +413,6 @@ function openPlayer(src,label){
   document.getElementById('playerModal').classList.add('open');
   document.body.style.overflow='hidden';
   window.addEventListener('message',handlePlayerMessage);
-  const params = new URLSearchParams(window.location.search);
-  if(currentPlayerSeason) params.set('s', currentPlayerSeason);
-  if(currentPlayerEpisode) params.set('e', currentPlayerEpisode);
-  params.set('play', 'true');
-  window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
 }
 
 function closePlayerModal(e){if(e.target===e.currentTarget)closePlayerModalBtn()}
@@ -443,11 +420,6 @@ function closePlayerModalBtn(){
   document.getElementById('playerModal').classList.remove('open');
   document.getElementById('playerFrame').src='';
   document.body.style.overflow='';
-  const params = new URLSearchParams(window.location.search);
-  params.delete('play');
-  params.delete('s');
-  params.delete('e');
-  window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
 }
 
 function handlePlayerMessage(event){
@@ -599,18 +571,6 @@ function removeFromRecent(e, id) {
     showRecent();
   }
   showToast("Removed from history");
-}
-
-function createBackButton(type) {
-  const btn = document.createElement('button');
-  btn.className = 'back-btn-float';
-  btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>`;
-  btn.onclick = () => {
-    if (type === 'modal') closeDetailModalBtn();
-    else closePlayerModalBtn();
-    document.body.removeChild(btn);
-  };
-  document.body.appendChild(btn);
 }
 
 async function init(){
