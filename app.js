@@ -69,8 +69,11 @@ function toggleTheme(){
     :'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
 }
 
-window.addEventListener('scroll',()=>{
-  document.getElementById('mainNav').classList.toggle('scrolled',window.scrollY>20);
+window.addEventListener('scroll', () => {
+  document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 20);
+});
+
+function checkUrlParams() {
   const params = new URLSearchParams(window.location.search);
   const movie = params.get('movie');
   const tv = params.get('tv');
@@ -79,13 +82,10 @@ window.addEventListener('scroll',()=>{
   if (params.get('play') === 'true' && currentModal) {
     const s = params.get('s');
     const e = params.get('e');
-    if (currentModal.type === 'movie') {
-      playMovie(currentModal.id, 'Media');
-    } else {
-      playEpisode(currentModal.id, s, e, 'Episode');
-    }
+    if (currentModal.type === 'movie') playMovie(currentModal.id, 'Media');
+    else playEpisode(currentModal.id, s, e, 'Episode');
   }
-});
+}
 
 function setActiveNav(el){
   document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
@@ -255,9 +255,9 @@ function playMovie(id, title, posterPath = ''){
   renderRecent();
 }
 
-async function openDetail(id,type){
-  const overlay=document.getElementById('detailModal');
-  overlay.classList.add('open');
+async function openDetail(id, type) {
+  currentModal = {id, type};
+  showPage('detailPage');
   if (window.innerWidth <= 860) createBackButton('modal');
   currentModal={id,type};
   document.getElementById('modalTitle').textContent='Loading...';
@@ -400,10 +400,9 @@ async function loadEpisodes(tvId,season){
   }
 }
 
-function closeDetailModal(e){if(e.target===e.currentTarget)closeDetailModalBtn()}
-function closeDetailModalBtn(){
-  document.getElementById('detailModal').classList.remove('open');
-  document.body.style.overflow='';
+function closeDetailModal(e){if(e.target===e.currentTarget)closeDetailPage()}
+function closeDetailPage() {
+  hidePage('detailPage');
   window.history.pushState(null, '', window.location.pathname);
 }
 
@@ -426,29 +425,44 @@ function playEpisode(tvId,season,ep,epName){
   }
 }
 
-function openPlayer(src,label){
-  document.getElementById('playerFrame').src=src;
-  document.getElementById('playerTitleText').textContent=label;
-  document.getElementById('playerModal').classList.add('open');
-  document.body.style.overflow='hidden';
-  window.addEventListener('message',handlePlayerMessage);
+function openPlayer(src, label) {
+  document.getElementById('playerFrame').src = src;
+  document.getElementById('playerTitleText').textContent = label;
+  showPage('playerPage');
+  window.removeEventListener('message', handlePlayerMessage);
+  window.addEventListener('message', handlePlayerMessage);
   const params = new URLSearchParams(window.location.search);
-  if(currentPlayerSeason) params.set('s', currentPlayerSeason);
-  if(currentPlayerEpisode) params.set('e', currentPlayerEpisode);
+  if (currentPlayerSeason) params.set('s', currentPlayerSeason);
+  if (currentPlayerEpisode) params.set('e', currentPlayerEpisode);
   params.set('play', 'true');
   window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
 }
 
 function closePlayerModal(e){if(e.target===e.currentTarget)closePlayerModalBtn()}
-function closePlayerModalBtn(){
-  document.getElementById('playerModal').classList.remove('open');
-  document.getElementById('playerFrame').src='';
-  document.body.style.overflow='';
+function closePlayerPage() {
+  hidePage('playerPage');
+  document.getElementById('playerFrame').src = '';
   const params = new URLSearchParams(window.location.search);
   params.delete('play');
   params.delete('s');
   params.delete('e');
   window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+}
+function closePlayerModalBtn() { closePlayerPage(); }
+function closePlayerModal() { closePlayerPage(); }
+
+function showPage(id) {
+  document.getElementById('homeContent').classList.add('hidden');
+  document.getElementById('searchResults').classList.remove('visible');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+  document.body.style.overflow = '';
+}
+
+function hidePage(id) {
+  document.getElementById(id).classList.remove('active');
+  document.getElementById('homeContent').classList.remove('hidden');
 }
 
 function handlePlayerMessage(event){
@@ -607,7 +621,7 @@ function createBackButton(type) {
   btn.className = 'back-btn-float';
   btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>`;
   btn.onclick = () => {
-    if (type === 'modal') closeDetailModalBtn();
+    if (type === 'modal') closeDetailPage();
     else closePlayerModalBtn();
     document.body.removeChild(btn);
   };
