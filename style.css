@@ -74,12 +74,12 @@ body{
 
 .orb {
   position: fixed;
-  border-radius: 50% 40% 60% 50%; /* Organic shape */
-  filter: blur(120px); /* Increased blur for smoother light blending */
+  border-radius: 50% 40% 60% 50%;
+  filter: blur(120px);
   pointer-events: none;
   z-index: 0;
   opacity: 0.4;
-  mix-blend-mode: screen; /* Makes colors blend artistically where they overlap */
+  mix-blend-mode: screen;
   transition: all 2s ease-in-out;
   will-change: transform;
 }
@@ -618,6 +618,36 @@ main {
 }
 
 .recently-section{padding:0 40px;margin-bottom:52px}
+
+.back-btn-float {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 5000;
+  background: var(--glass-bg);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--tr);
+  box-shadow: var(--glass-shadow);
+}
+
+.back-btn-float:hover {
+  background: var(--accent);
+  border-color: rgba(232, 39, 26, 0.5);
+}
+
+@media(min-width: 860px) {
+  .back-btn-float { display: none; }
+}
+
 
 .toast{
   position:fixed;bottom:32px;left:50%;
