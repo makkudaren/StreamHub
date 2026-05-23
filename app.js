@@ -69,17 +69,23 @@ function toggleTheme(){
     :'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
 }
 
-window.addEventListener('scroll', () => {
-  document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 20);
-});
-
-(function checkUrlParams() {
+window.addEventListener('scroll',()=>{
+  document.getElementById('mainNav').classList.toggle('scrolled',window.scrollY>20);
   const params = new URLSearchParams(window.location.search);
   const movie = params.get('movie');
   const tv = params.get('tv');
   if (movie) openDetail(movie, 'movie');
   else if (tv) openDetail(tv, 'tv');
-})();
+  if (params.get('play') === 'true' && currentModal) {
+    const s = params.get('s');
+    const e = params.get('e');
+    if (currentModal.type === 'movie') {
+      playMovie(currentModal.id, 'Media');
+    } else {
+      playEpisode(currentModal.id, s, e, 'Episode');
+    }
+  }
+});
 
 function setActiveNav(el){
   document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
@@ -252,6 +258,7 @@ function playMovie(id, title, posterPath = ''){
 async function openDetail(id,type){
   const overlay=document.getElementById('detailModal');
   overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
   if (window.innerWidth <= 860) createBackButton('modal');
   currentModal={id,type};
   document.getElementById('modalTitle').textContent='Loading...';
