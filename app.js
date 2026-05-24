@@ -1,12 +1,12 @@
 const TMDB_KEY='98ec65682824bd46bc5b926e5b267f43';
 const TMDB='https://api.themoviedb.org/3';
 const IMG='https://image.tmdb.org/t/p/';
-const VID='https://vidsrc.me/embed';
 const COLOR='e8271a';
 
 let heroItems=[],currentHeroIdx=0,heroItem=null,heroTimer=null,searchTimer=null;
 let currentPlayerSeason=1,currentPlayerEpisode=1,currentMediaMeta=null;
 let currentView='homeContent';
+let activePlayer = getSaved('sv_player', 'vidking');
 
 function getSaved(k,d=null){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}}
 function setSaved(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
@@ -66,15 +66,37 @@ let isDark=true;
 function toggleTheme(){
   isDark=!isDark;
   document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
+  const toggle = document.getElementById('themeToggle');
+  if(toggle) toggle.checked = isDark;
 }
 
+function openSettings() {
+  switchPage('settingsPage');
+  document.getElementById('themeToggle').checked = isDark;
+  setPlayer(activePlayer, false);
+}
+
+function closeSettingsBtn() {
+  handleUrlRouting();
+}
+
+function setPlayer(player, save = true) {
+  activePlayer = player;
+  if (save) setSaved('sv_player', player);
+  document.querySelectorAll('.player-card').forEach(card => card.classList.remove('active'));
+  document.querySelectorAll('.player-card-check').forEach(check => check.style.opacity = '0');
+  document.getElementById('card-' + player).classList.add('active');
+  const check = document.getElementById('check-' + player);
+  if (check) check.style.opacity = '1';
+  if (save) showToast(`Player set to ${player === 'vidking' ? 'VidKing' : 'VidSrc'}`);
+}
 window.addEventListener('scroll',()=>{
   document.getElementById('mainNav').classList.toggle('scrolled',window.scrollY>20);
 });
 
 function switchPage(pageId) {
   currentView = pageId;
-  const pages = ['homeContent', 'searchResults', 'detailPage', 'playerPage'];
+  const pages = ['homeContent', 'searchResults', 'detailPage', 'playerPage', 'settingsPage'];
   pages.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = id === pageId ? 'block' : 'none';
@@ -274,18 +296,6 @@ async function setHero(idx){
 function playFromHero(){if(heroItem) playMovie(heroItem.id, heroItem.title, heroItem.poster_path, true);}
 function infoFromHero(){if(heroItem)openDetail(heroItem.id,'movie',true)}
 
-function playMovie(id, title, posterPath = '', pushState = true){
-  const prog=getProgress(id);
-  const src=`${VID}/movie/${id}?color=${COLOR}&autoPlay=true${prog>0?`&progress=${Math.floor(prog*36)}`:''}`;
-  openPlayer(src, title||'', pushState);
-  if (currentMediaMeta && currentMediaMeta.id === id) {
-    saveRecent(currentMediaMeta);
-  } else {
-    saveRecent({id, type:'movie', title, year:'', poster: posterPath});
-  }
-  renderRecent();
-}
-
 async function openDetail(id, type, pushState = true){
   switchPage('detailPage');
   
@@ -453,10 +463,33 @@ function playMedia(id,type,title,s,e){
   }
 }
 
+function playMovie(id, title, posterPath = '', pushState = true){
+  const prog=getProgress(id);
+  let src = '';
+  if (activePlayer === 'vidking') {
+    src = `https://www.vidking.net/embed/movie/${id}?color=${COLOR}&autoPlay=true`;
+  } else {
+    src = `https://vidsrcme.ru/embed/movie/${id}`;
+  }
+  openPlayer(src, title||'', pushState);
+  if (currentMediaMeta && currentMediaMeta.id === id) {
+    saveRecent(currentMediaMeta);
+  } else {
+    saveRecent({id, type:'movie', title, year:'', poster: posterPath});
+  }
+  renderRecent();
+}
+
+
 function playEpisode(tvId,season,ep,epName, pushState = true){
   currentPlayerSeason=season;currentPlayerEpisode=ep;
   const prog=getProgress(`${tvId}_s${season}e${ep}`);
-  const src=`${VID}/tv/${tvId}/${season}/${ep}?color=${COLOR}&autoPlay=true&nextEpisode=true&episodeSelector=true${prog>0?`&progress=${Math.floor(prog*36)}`:''}`;
+  let src = '';
+  if (activePlayer === 'vidking') {
+    src = `https://www.vidking.net/embed/tv/${tvId}/${season}/${ep}?color=${COLOR}&autoPlay=true&nextEpisode=true&episodeSelector=true`;
+  } else {
+    src = `https://vidsrcme.ru/embed/tv/${tvId}/${season}/${ep}`;
+  }
   openPlayer(src,`S${season} E${ep} – ${epName||''}`, pushState);
   if (currentMediaMeta && currentMediaMeta.id === tvId) {
     saveRecent(currentMediaMeta);
@@ -466,7 +499,10 @@ function playEpisode(tvId,season,ep,epName, pushState = true){
 
 function openPlayer(src, label, pushState = true){
   switchPage('playerPage');
-  document.getElementById('playerFrame').src=src;
+  document.getElementById('playerFrameWrap').innerHTML = `
+    <iframe id="playerFrame" src="${src}" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="autoplay; fullscreen"></iframe>
+  `;
+  
   document.getElementById('playerTitleText').textContent=label;
   window.addEventListener('message',handlePlayerMessage);
   
@@ -480,7 +516,7 @@ function openPlayer(src, label, pushState = true){
 }
 
 function closePlayerBtn(){
-  document.getElementById('playerFrame').src='';
+  document.getElementById('playerFrameWrap').innerHTML = '';
   const params = new URLSearchParams(window.location.search);
   params.delete('play');
   params.delete('s');

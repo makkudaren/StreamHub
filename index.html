@@ -34,6 +34,9 @@
     <button class="search-btn" onclick="toggleSearch()" title="Search">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     </button>
+    <button class="search-btn" style="margin-left:8px;" onclick="openSettings()" title="Settings">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
   </div>
 </nav>
 
@@ -65,7 +68,7 @@
           Play Now
         </button>
         <button class="btn btn-glass" onclick="infoFromHero()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           More Info
         </button>
       </div>
@@ -238,12 +241,168 @@
   <div class="player-header">
     <button class="player-back-btn" onclick="closePlayerBtn()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-      Back to Details
     </button>
     <div class="player-title" id="playerTitleText"></div>
   </div>
-  <div class="player-frame-wrap">
-    <iframe id="playerFrame" src="" frameborder="0" scrolling="no" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="autoplay; fullscreen"></iframe>
+  <div class="player-frame-wrap" id="playerFrameWrap"></div>
+</div>
+
+<div class="page-view settings-page" id="settingsPage" style="display:none">
+  <div class="settings-wrap">
+
+    <div class="settings-header">
+      <button class="detail-back-btn" onclick="closeSettingsBtn()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </button>
+      <div class="settings-title-row">
+        <div class="settings-icon-wrap">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </div>
+        <div>
+          <h1 class="settings-page-title">Settings</h1>
+          <p class="settings-page-sub">Customize your StreamHub experience</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-card settings-card-player-featured">
+      <div class="settings-card-label">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Default Player
+      </div>
+      <p class="settings-player-hint">Choose your streaming player. This affects how all content is loaded and played.</p>
+      <div class="player-options-row">
+
+        <div class="player-card active" id="card-vidking" onclick="setPlayer('vidking')">
+          <div class="player-card-header">
+            <div class="player-card-icon-wrap" style="background:rgba(232,39,26,0.12);border-color:rgba(232,39,26,0.25);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"></path></svg>
+            </div>
+            <div class="player-card-title-wrap">
+              <span class="player-card-title">VidKing</span>
+              <span class="player-recommended-badge">Recommended</span>
+            </div>
+            <div class="player-card-check" id="check-vidking">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <div class="player-features-grid">
+            <div class="pf-col pf-col-pros">
+              <div class="pf-col-header">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Pros
+              </div>
+              <ul class="player-features">
+                <li class="pro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>High Quality Stream</li>
+                <li class="pro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>Custom StreamHub UI</li>
+                <li class="pro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Resume Tracking</li>
+                <li class="pro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Minimal Ads</li>
+              </ul>
+            </div>
+            <div class="pf-col pf-col-cons">
+              <div class="pf-col-header">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Cons
+              </div>
+              <ul class="player-features">
+                <li class="con"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h3M14 15h3M7 11h10"/><line x1="3" y1="3" x2="21" y2="21"/></svg>Subtitles Unstable</li>
+                <li class="con"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/><line x1="3" y1="3" x2="21" y2="21"/></svg>Fixed Playback Speed</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="player-card" id="card-vidsrc" onclick="setPlayer('vidsrc')">
+          <div class="player-card-header">
+            <div class="player-card-icon-wrap" style="background:rgba(255,92,77,0.1);border-color:rgba(255,92,77,0.2);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div class="player-card-title-wrap">
+              <span class="player-card-title">VidSrc</span>
+              <span class="player-alt-badge">Alternative</span>
+            </div>
+            <div class="player-card-check" id="check-vidsrc" style="opacity:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <div class="player-features-grid">
+            <div class="pf-col pf-col-pros">
+              <div class="pf-col-header">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Pros
+              </div>
+              <ul class="player-features">
+                <li class="pro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>High Quality Stream</li>
+                <li class="pro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h3M14 15h3M7 11h10"/></svg>Extensive Subtitles</li>
+                <li class="pro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/></svg>Variable Speed</li>
+              </ul>
+            </div>
+            <div class="pf-col pf-col-cons">
+              <div class="pf-col-header">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Cons
+              </div>
+              <ul class="player-features">
+                <li class="neutral"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Default Interface</li>
+                <li class="con"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>Frequent Ad Overlays</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="settings-bottom-row">
+
+      <div class="settings-card">
+        <div class="settings-card-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          Appearance
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-left">
+            <div class="settings-row-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </div>
+            <div>
+              <div class="settings-row-title">Dark Mode</div>
+              <div class="settings-row-desc">Use dark theme across the app</div>
+            </div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="themeToggle" onchange="toggleTheme()" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <div class="settings-inner-divider"></div>
+        <div class="settings-row settings-row-static">
+          <div class="settings-row-left">
+            <div class="settings-row-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            </div>
+            <div>
+              <div class="settings-row-title">Accent Color</div>
+              <div class="settings-row-desc">StreamHub Red</div>
+            </div>
+          </div>
+          <div class="settings-color-dot"></div>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          About
+        </div>
+        <p class="disclaimer-text" style="text-align:left; margin-top:4px;">
+          <strong style="color:var(--text2);">StreamHub v1.0</strong><br><br>
+          This app does not host or store any media. All content is streamed from non-affiliated third-party players. StreamHub is a discovery and UI layer only.
+        </p>
+      </div>
+
+    </div>
   </div>
 </div>
 
