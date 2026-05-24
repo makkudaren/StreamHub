@@ -251,6 +251,7 @@ async function fillRow(rowId,path,params={},type='movie',wide=false){
   try{
     const d=await tmdb(path,params);
     row.innerHTML=(d.results||[]).map(i=>wide?makeWideCard(i,type):makeCard(i,type)).join('');
+    staggerCards(row);
   }catch{row.innerHTML='<p style="color:var(--text3);padding:20px">Failed to load.</p>'}
 }
 
@@ -437,6 +438,7 @@ async function loadEpisodes(tvId,season){
         </div>
       </div>`;
     }).join('')}</div>`;
+    staggerCards(el.querySelector('.episodes-grid'));
   }catch{
     el.innerHTML='<p style="color:var(--text3);padding:20px">Failed to load episodes.</p>';
   }
@@ -545,6 +547,7 @@ function renderRecent(){
   if(!recent.length){section.style.display='none';return;}
   section.style.display='block';
   row.innerHTML=recent.map(item => makeRecentCard(item, true)).join('');
+  staggerCards(row);
 }
 
 function renderMyListRow() {
@@ -554,6 +557,7 @@ function renderMyListRow() {
   if(!list.length) { section.style.display='none'; return; }
   section.style.display='block';
   row.innerHTML = list.map(item => makeListCard(item, true)).join('');
+  staggerCards(row);
 }
 
 function showMyList() {
@@ -564,6 +568,7 @@ function showMyList() {
   const grid = document.getElementById('searchGrid');
   if(!list.length) { grid.innerHTML='<p style="color:var(--text3);padding:20px;grid-column:1/-1">Your list is empty. Start saving some movies or shows!</p>'; return; }
   grid.innerHTML = list.map(item => makeListCard(item, true)).join('');
+  staggerCards(grid);
   setActiveNav(document.getElementById('navList'));
 }
 
@@ -598,6 +603,7 @@ async function doSearch(q){
     document.getElementById('searchCount').textContent=`${all.length} results found`;
     if(!all.length){grid.innerHTML='<p style="color:var(--text3);padding:20px;grid-column:1/-1">No results found.</p>';return;}
     grid.innerHTML=all.map(i=>makeCard(i,i._type)).join('');
+    staggerCards(grid);
   }catch{grid.innerHTML='<p style="color:var(--text3);padding:20px;grid-column:1/-1">Search failed.</p>'}
 }
 
@@ -624,6 +630,7 @@ function loadGridData(title, apis, navElementId) {
     const seen=new Set();
     const unique=all.filter(i=>!seen.has(i.id)&&seen.add(i.id));
     grid.innerHTML=unique.map(i=>makeCard(i,i._type)).join('');
+    staggerCards(grid);
   }).catch(()=>{grid.innerHTML='<p style="color:var(--text3);padding:20px;grid-column:1/-1">Failed to load.</p>'});
   
   setActiveNav(document.getElementById(navElementId));
@@ -666,6 +673,19 @@ function removeFromRecent(e, id) {
     showRecent();
   }
   showToast("Removed from history");
+}
+
+function staggerCards(container) {
+  if (!container) return;
+  
+  Array.from(container.children).forEach((child, idx) => {
+    child.style.animationDelay = `${idx * 20}ms`; 
+    child.style.pointerEvents = 'none'; 
+    child.addEventListener('animationend', () => {
+      child.style.animation = 'none';
+      child.style.pointerEvents = 'auto';
+    }, { once: true });
+  });
 }
 
 async function init(){

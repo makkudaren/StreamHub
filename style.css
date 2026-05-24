@@ -173,6 +173,42 @@ body{
   100% { transform: translate(0, 0) scale(1); }
 }
 
+@keyframes shimmerLogo {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pulseBadge {
+  0%, 100% { box-shadow: 0 0 20px rgba(232,39,26,0.15), inset 0 1px 0 rgba(255,255,255,0.06); }
+  50%       { box-shadow: 0 0 32px rgba(232,39,26,0.42), 0 0 8px rgba(232,39,26,0.22), inset 0 1px 0 rgba(255,255,255,0.10); }
+}
+@keyframes dotGrow {
+  0%, 100% { transform: scale(1);   opacity: 0.85; }
+  50%       { transform: scale(1.5); opacity: 1; }
+}
+@keyframes spinnerPop {
+  0%   { opacity: 0; transform: scale(0.45); }
+  65%  { opacity: 1; transform: scale(1.12); }
+  82%  { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--glass-border);border-radius:99px}
@@ -190,6 +226,7 @@ nav{
   border-radius:var(--radius-xl);
   box-shadow:var(--glass-shadow);
   transition:all var(--tr);
+  animation: fadeInDown 0.55s cubic-bezier(0.22,1,0.36,1) both;
 }
 nav.scrolled{
   background:rgba(255,255,255,0.075);
@@ -202,8 +239,19 @@ nav.scrolled{
   font-size:26px;letter-spacing:2px;
   color:var(--accent);cursor:pointer;flex-shrink:0;text-decoration:none;
   text-shadow:0 0 30px rgba(232,39,26,0.6);
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent), var(--accent2));
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmerLogo 4s linear infinite;
+  will-change: background-position;
 }
-.nav-logo span{color:var(--text)}
+.nav-logo span{
+  -webkit-text-fill-color: var(--text);
+  background: none;
+  animation: none;
+}
 .nav-links{display:flex;gap:10px;align-items:center}
 .nav-link{
   background:none;border:none;
@@ -292,6 +340,7 @@ nav.scrolled{
   margin-bottom:20px;
   text-transform:uppercase;letter-spacing:1.5px;
   box-shadow:0 0 20px rgba(232,39,26,0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+  animation: fadeIn 0.5s ease both, pulseBadge 2.8s ease-in-out 0.6s infinite;
 }
 .hero-title {
   font-family: 'Bebas Neue', sans-serif;
@@ -301,8 +350,9 @@ nav.scrolled{
   margin-bottom: 18px;
   max-width: 700px;
   text-shadow: 0 4px 40px rgba(0,0,0,0.5);
+  animation: slideInLeft 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both;
 }
-.hero-meta{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.hero-meta{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap;animation:fadeInUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.3s both;}
 .hero-rating{display:flex;align-items:center;gap:5px;color:var(--gold);font-weight:600;font-size:14px}
 .hero-year,.hero-genre{font-size:13px;color:var(--text2)}
 .hero-dot{width:3px;height:3px;border-radius:50%;background:var(--text3)}
@@ -311,8 +361,9 @@ nav.scrolled{
   color:rgba(240,242,255,0.8);
   max-width:500px;margin-bottom:32px;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  animation:fadeInUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.42s both;
 }
-.hero-btns{display:flex;gap:12px;flex-wrap:wrap}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;animation:fadeInUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.55s both;}
 
 .btn{
   display:inline-flex;align-items:center;gap:8px;
@@ -356,7 +407,7 @@ nav.scrolled{
   background:rgba(255,255,255,0.2);border:none;cursor:pointer;
   transition:all var(--tr);
 }
-.hero-dot-btn.active{background:var(--accent);width:44px;box-shadow:0 0 12px rgba(232,39,26,0.6)}
+.hero-dot-btn.active{background:var(--accent);width:44px;box-shadow:0 0 12px rgba(232,39,26,0.6);animation:dotGrow 2s ease-in-out infinite;}
 
 main {
   position: relative;
@@ -554,6 +605,7 @@ main {
   max-width: 1200px;
   margin: -120px auto 0;
   padding: 0 40px;
+  animation: fadeInUp 0.6s cubic-bezier(0.22,1,0.36,1) both;
 }
 .detail-body-inner {
   background: rgba(15,18,35,0.65);
@@ -570,6 +622,7 @@ main {
   letter-spacing: 1px;
   line-height: 1;
   margin-bottom: 16px;
+  animation: slideInLeft 0.55s cubic-bezier(0.22,1,0.36,1) 0.08s both;
 }
 .detail-meta {
   display: flex;
@@ -577,12 +630,14 @@ main {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 24px;
+  animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.18s both;
 }
 .detail-actions {
   display: flex;
   gap: 12px;
   margin-bottom: 32px;
   flex-wrap: wrap;
+  animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.28s both;
 }
 .detail-overview {
   font-size: 15px;
@@ -590,6 +645,7 @@ main {
   color: var(--text2);
   margin-bottom: 36px;
   max-width: 900px;
+  animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.38s both;
 }
 
 .season-tabs{display:flex;gap:8px;margin-bottom:22px;overflow-x:auto;padding-bottom:4px}
@@ -659,6 +715,7 @@ main {
   background: #000;
   display: flex;
   flex-direction: column;
+  animation: fadeIn 0.35s ease both;
 }
 .player-header {
   height: 60px;
@@ -673,6 +730,7 @@ main {
   right: 0;
   z-index: 100;
   transition: opacity 0.3s;
+  animation: fadeInDown 0.45s cubic-bezier(0.22,1,0.36,1) 0.1s both;
 }
 .player-page:hover .player-header { opacity: 1; }
 .player-back-btn {
@@ -747,7 +805,7 @@ main {
   border:2.5px solid var(--glass-border);
   border-top-color:var(--accent);
   border-radius:50%;
-  animation:spin 0.75s linear infinite;
+  animation: spinnerPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both, spin 0.75s linear 0.5s infinite;
   box-shadow:0 0 16px rgba(232,39,26,0.3);
 }
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -825,6 +883,7 @@ button, .card, .nav-link, .btn, .row-arrow, .episode-card {
 
 .settings-header {
   margin-bottom: 36px;
+  animation: fadeInDown 0.5s cubic-bezier(0.22,1,0.36,1) both;
 }
 .settings-title-row {
   display: flex;
@@ -890,7 +949,13 @@ button, .card, .nav-link, .btn, .row-arrow, .episode-card {
   box-shadow: 0 20px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07);
   position: relative;
   overflow: hidden;
+  animation: fadeInUp 0.55s cubic-bezier(0.22,1,0.36,1) both;
 }
+.settings-card:nth-child(1) { animation-delay: 0.12s; }
+.settings-card:nth-child(2) { animation-delay: 0.22s; }
+.settings-card:nth-child(3) { animation-delay: 0.32s; }
+.settings-card:nth-child(4) { animation-delay: 0.42s; }
+.settings-card:nth-child(5) { animation-delay: 0.52s; }
 .settings-card::before {
   content: '';
   position: absolute;
@@ -1141,6 +1206,9 @@ input:checked + .slider:before { transform: translateX(22px); }
   line-height: 1.65;
 }
 
+.card, .episode-card {
+  animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
 
 @media (min-width: 1200px) {
   .settings-wrap { max-width: 1300px; }
