@@ -4,6 +4,9 @@
   --accent: #e8271a;
   --accent2: #ff5c4d;
   --accent3: #ef5350;
+  --orb1: #e61313;
+  --orb2: #2813e6;
+  --orb3: #2813e6;
   --gold: #f5c518;
   --text: #f0f2ff;
   --text2: #9ba3c8;
@@ -60,27 +63,31 @@ body{
 }
 
 .orb1 {
-  width: 20vw;
-  height: 20vw;
-  background: radial-gradient(circle, var(--accent), transparent 70%);
-  top: -15%;
-  left: -10%;
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, var(--orb1), transparent 70%);
+  /* top: -15%;
+  left: -10%; */
+  top: 0%;
+  left: 30%;
   animation: float 15s infinite ease-in-out;
 }
 
 .orb2 {
-  width: 20vw;
-  height: 20vw;
-  background: radial-gradient(circle, var(--accent2), transparent 70%);
+  display: none;
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, var(--orb2), transparent 70%);
   bottom: -10%;
   right: -5%;
   animation: float 20s infinite ease-in-out reverse;
 }
 
 .orb3 {
-  width: 15vw;
-  height: 15vw;
-  background: radial-gradient(circle, var(--accent3), transparent 70%);
+  display: none;
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, var(--orb3), transparent 70%);
   top: 40%;
   left: 30%;
   animation: float 18s infinite ease-in-out 2s;
@@ -264,6 +271,9 @@ nav.scrolled{
   transform:translateY(-2px);
   box-shadow:var(--glass-shadow-lg);
 }
+.btn-icon {
+  padding: 11px 14px;
+}
 
 .hero-indicators{position:absolute;bottom:32px;right:64px;display:flex;gap:8px;z-index:2}
 .hero-dot-btn{
@@ -288,10 +298,13 @@ main {
   font-size:24px;letter-spacing:1.5px;
   display:flex;align-items:center;gap:10px;
 }
-.section-title .dot{
-  width:7px;height:7px;border-radius:50%;
-  background:var(--accent);
-  box-shadow:0 0 10px rgba(232,39,26,0.8);
+.section-title svg {
+  color: var(--accent);
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0 8px rgba(232, 39, 26, 0.6));
+  flex-shrink: 0;
+  margin-right: 4px;
 }
 .section-more{
   background:var(--glass-bg);border:1px solid var(--glass-border);

@@ -1,7 +1,7 @@
 const TMDB_KEY='98ec65682824bd46bc5b926e5b267f43';
 const TMDB='https://api.themoviedb.org/3';
 const IMG='https://image.tmdb.org/t/p/';
-const VID='https://www.vidking.net/embed';
+const VID='https://vidsrc.me/embed';
 const COLOR='e8271a';
 
 let heroItems=[],currentHeroIdx=0,heroItem=null,heroTimer=null,searchTimer=null;
@@ -15,9 +15,9 @@ function getProgress(id){return getSaved('sv_progress_'+id,0)}
 function saveProgress(id,pct){setSaved('sv_progress_'+id,pct)}
 function saveRecent(item){
   let l=getRecent();
-  const existing = l.find(i => i.id === item.id);
+  const existing = l.find(i => String(i.id) === String(item.id));
   if(existing) item = { ...existing, ...item };
-  l=l.filter(i=>i.id!==item.id);
+  l=l.filter(i=>String(i.id)!==String(item.id));
   l.unshift(item);
   if(l.length>20)l=l.slice(0,20);
   setSaved('sv_recent',l);
@@ -28,17 +28,17 @@ function getMyList() { return getSaved('sv_mylist', []); }
 function toggleMyList() {
   if (!currentMediaMeta) return;
   let list = getMyList();
-  const exists = list.find(i => i.id === currentMediaMeta.id);
+  const exists = list.find(i => String(i.id) === String(currentMediaMeta.id));
   const btn = document.querySelector('.detail-actions .btn-glass');
   
   if (exists) {
-    list = list.filter(i => i.id !== currentMediaMeta.id);
+    list = list.filter(i => String(i.id) !== String(currentMediaMeta.id));
     showToast(`"${currentMediaMeta.title}" removed from your list`);
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save`;
+    btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
   } else {
     list.unshift(currentMediaMeta);
     showToast(`"${currentMediaMeta.title}" saved to your list`);
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Saved`;
+    btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
   }
   
   setSaved('sv_mylist', list);
@@ -48,15 +48,20 @@ function toggleMyList() {
 function removeFromMyList(e, id) {
   e.stopPropagation();
   let list = getMyList();
-  list = list.filter(item => item.id !== id);
+  list = list.filter(item => String(item.id) !== String(id));
   setSaved('sv_mylist', list);
   renderMyListRow();
+  
   if (currentView === 'searchResults' && document.getElementById('searchTitle').textContent === 'My List') {
     showMyList();
+  }  
+  if (currentView === 'detailPage' && currentMediaMeta && String(currentMediaMeta.id) === String(id)) {
+    const btn = document.querySelector('.detail-actions .btn-glass');
+    if (btn) btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
   }
+  
   showToast("Removed from My List");
 }
-
 let isDark=true;
 function toggleTheme(){
   isDark=!isDark;
@@ -339,17 +344,17 @@ async function openDetail(id, type, pushState = true){
     `;
     const prog=getProgress(id);
     currentMediaMeta = {id, type, title, poster: d.poster_path, rating: d.vote_average, year};
-    const isInList = getMyList().some(i => i.id === id);
+    const isInList = getMyList().some(i => String(i.id) === String(id));
 
     document.getElementById('detailActions').innerHTML=`
       <button class="btn btn-primary" onclick="playMedia(${id},'${type}','${title.replace(/'/g,"\\'")}')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         ${prog>0?'Continue':'Play Now'}
       </button>
-      <button class="btn btn-glass" onclick="toggleMyList()">
+      <button class="btn btn-glass btn-icon" onclick="toggleMyList()" title="My List">
         ${isInList 
-          ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Saved` 
-          : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> My List`}
+          ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>` 
+          : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`}
       </button>
     `;
     document.getElementById('detailOverview').textContent=d.overview||'No description available.';
@@ -618,7 +623,7 @@ function showRecent(){
 function removeFromRecent(e, id) {
   e.stopPropagation();
   let recent = getRecent();
-  recent = recent.filter(item => item.id !== id);
+  recent = recent.filter(item => String(item.id) !== String(id));
   setSaved('sv_recent', recent);
   renderRecent(); 
   if (currentView === 'searchResults' && document.getElementById('searchTitle').textContent === 'Continue Watching') {
