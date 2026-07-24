@@ -305,7 +305,7 @@ nav.scrolled{
   -webkit-backdrop-filter:var(--blur);
   transition:border-color var(--tr),box-shadow var(--tr);
 }
-.search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,39,26,0.15)}
+.search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,39,26,0.15);outline:none}
 .search-icon-inner{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text);pointer-events:none}
 
 .hero{
@@ -691,6 +691,33 @@ main {
   padding:2px 7px;border-radius:5px;
   border:1px solid rgba(255,255,255,0.12);
 }
+.episode-watched-btn{
+  position:absolute;top:7px;right:9px;
+  width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.5);
+  backdrop-filter:var(--blur-sm);
+  -webkit-backdrop-filter:var(--blur-sm);
+  border:1.5px solid rgba(255,255,255,0.35);
+  color:rgba(255,255,255,0.55);
+  cursor:pointer;z-index:2;
+  transition:all var(--tr);
+}
+.episode-watched-btn:hover{
+  border-color:rgba(255,255,255,0.6);
+  color:#fff;
+  transform:scale(1.1);
+}
+.episode-watched-btn.checked{
+  background:linear-gradient(135deg,var(--accent),var(--accent3));
+  border-color:rgba(232,39,26,0.5);
+  color:#fff;
+  box-shadow:0 0 12px rgba(232,39,26,0.5);
+}
+[data-theme="light"] .episode-watched-btn{
+  background:rgba(0,0,0,0.35);
+  border-color:rgba(255,255,255,0.4);
+}
 .episode-play-icon{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   background:rgba(0,0,0,0.35);
@@ -867,6 +894,39 @@ main {
 button, .card, .nav-link, .btn, .row-arrow, .episode-card {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* TV remote / keyboard D-pad focus ring */
+:focus { outline: none; }
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius);
+}
+.card:focus-visible,
+.episode-card:focus-visible,
+.player-card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  transform: scale(1.05) translateY(-6px);
+  z-index: 5;
+}
+.episode-card:focus-visible { transform: translateX(4px); }
+.nav-link:focus-visible,
+.search-btn:focus-visible,
+.btn:focus-visible,
+.row-arrow:focus-visible,
+.section-more:focus-visible,
+.season-tab:focus-visible,
+.detail-back-btn:focus-visible,
+.player-back-btn:focus-visible,
+.hero-dot-btn:focus-visible,
+.episode-watched-btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.switch:focus-within .slider {
+  box-shadow: 0 0 0 3px var(--accent);
 }
 
 .settings-page {
@@ -1307,6 +1367,49 @@ input:checked + .slider:before { transform: translateX(22px); }
   .player-options {
     grid-template-columns: 1fr;
   }
+}
+
+/* TV / low-power mode: large screen, no hover, coarse-or-no pointer (remote-driven),
+   or detected via JS UA sniff (class added on <html>). Backdrop-filter and endless
+   decorative animations are the main cost on TV GPUs, so cut them here. */
+@media (hover: none) and (pointer: coarse) and (min-width: 1200px), (min-width: 1200px) and (pointer: none) {
+  html:not(.force-full-fx) {
+    --blur: none;
+    --blur-sm: none;
+  }
+  html:not(.force-full-fx) .orb { display: none !important; }
+  html:not(.force-full-fx) .nav-logo,
+  html:not(.force-full-fx) .hero-badge,
+  html:not(.force-full-fx) .hero-dot-btn.active,
+  html:not(.force-full-fx) .skeleton {
+    animation: none !important;
+  }
+  html:not(.force-full-fx) .card,
+  html:not(.force-full-fx) .episode-card {
+    animation: none !important;
+  }
+  html:not(.force-full-fx) .card:hover {
+    transform: none;
+  }
+}
+
+html.low-power {
+  --blur: none !important;
+  --blur-sm: none !important;
+}
+html.low-power .orb { display: none !important; }
+html.low-power .nav-logo,
+html.low-power .hero-badge,
+html.low-power .hero-dot-btn.active,
+html.low-power .skeleton {
+  animation: none !important;
+}
+html.low-power .card,
+html.low-power .episode-card {
+  animation: none !important;
+}
+html.low-power .card:hover {
+  transform: none;
 }
 
 @media(max-width: 500px) {

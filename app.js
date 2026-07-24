@@ -13,6 +13,15 @@ function setSaved(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 function getRecent(){return getSaved('sv_recent',[])}
 function getProgress(id){return getSaved('sv_progress_'+id,0)}
 function saveProgress(id,pct){setSaved('sv_progress_'+id,pct)}
+function isWatched(id){return getSaved('sv_watched_'+id,false)}
+function toggleWatched(e,id){
+  e.stopPropagation();
+  const nowWatched=!isWatched(id);
+  setSaved('sv_watched_'+id,nowWatched);
+  const btn=e.currentTarget;
+  btn.classList.toggle('checked',nowWatched);
+  btn.setAttribute('aria-label',nowWatched?'Mark as unwatched':'Mark as watched');
+}
 function saveRecent(item){
   let l=getRecent();
   const existing = l.find(i => String(i.id) === String(item.id));
@@ -62,17 +71,44 @@ function removeFromMyList(e, id) {
   
   showToast("Removed from My List");
 }
+function applyLowPower(on){
+  document.documentElement.classList.toggle('low-power', on);
+}
+
+function toggleLowPower(){
+  const on = document.getElementById('lowPowerToggle').checked;
+  setSaved('sv_low_power', on);
+  applyLowPower(on);
+  const row = document.getElementById('lowPowerRow');
+  if(row) row.setAttribute('aria-checked', on);
+  showToast(on ? 'Low-power mode enabled' : 'Low-power mode disabled');
+}
+
+(function detectTV(){
+  const manual = getSaved('sv_low_power', null);
+  if (manual !== null) { applyLowPower(manual); return; }
+  const ua = navigator.userAgent || '';
+  const tvPattern = /SmartTV|SMART-TV|Tizen|WebOS|Web0S|NetCast|HbbTV|BRAVIA|GoogleTV|CrKey|AFTB|AFTT|AFTS|AFTA|AFTN|Fire TV|VIDAA|ADT-G|POV_TV|HAIER|LG Browser|inettv/i;
+  const isTV = tvPattern.test(ua) || (window.innerWidth >= 1200 && !window.matchMedia('(hover: hover)').matches);
+  if (isTV) applyLowPower(true);
+})();
 let isDark=true;
 function toggleTheme(){
   isDark=!isDark;
   document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
   const toggle = document.getElementById('themeToggle');
   if(toggle) toggle.checked = isDark;
+  const row = document.getElementById('darkModeRow');
+  if(row) row.setAttribute('aria-checked', isDark);
 }
 
 function openSettings() {
   switchPage('settingsPage');
   document.getElementById('themeToggle').checked = isDark;
+  document.getElementById('darkModeRow').setAttribute('aria-checked', isDark);
+  const lowPowerOn = document.documentElement.classList.contains('low-power');
+  document.getElementById('lowPowerToggle').checked = lowPowerOn;
+  document.getElementById('lowPowerRow').setAttribute('aria-checked', lowPowerOn);
   setPlayer(activePlayer, false);
 }
 
@@ -178,7 +214,7 @@ function makeCard(item,type){
   const rating=item.vote_average?item.vote_average.toFixed(1):'—';
   const prog=getProgress(item.id);
   const isNew=item.vote_count<100;
-  return`<div class="card" onclick="openDetail(${item.id},'${type}',true)">
+  return`<div class="card" onclick="openDetail(${item.id},'${type}',true)" tabindex="0" role="button">
     ${poster?`<img class="card-poster" src="${poster}" alt="${title}" loading="lazy">`:`<div class="card-poster skeleton"></div>`}
     ${isNew?'<div class="card-badge">New</div>':''}
     ${prog>0?`<div class="card-progress"><div class="card-progress-fill" style="width:${prog}%"></div></div>`:''}
@@ -193,7 +229,7 @@ function makeWideCard(item,type){
   const thumb=item.backdrop_path?`${IMG}w500${item.backdrop_path}`:(item.poster_path?`${IMG}w342${item.poster_path}`:'');
   const title=item.title||item.name||'Untitled';
   const prog=getProgress(item.id);
-  return`<div class="card card-wide" onclick="openDetail(${item.id},'${type}',true)">
+  return`<div class="card card-wide" onclick="openDetail(${item.id},'${type}',true)" tabindex="0" role="button">
     ${thumb?`<img class="card-thumb" src="${thumb}" alt="${title}" loading="lazy">`:`<div class="card-thumb skeleton"></div>`}
     ${prog>0?`<div class="card-progress"><div class="card-progress-fill" style="width:${prog}%"></div></div>`:''}
     <div class="card-info">
@@ -213,7 +249,7 @@ function makeRecentCard(item, showRemove = false) {
 
   const fallbackIcon = `<div class="card-poster" style="background:var(--glass-bg);display:flex;align-items:center;justify-content:center;aspect-ratio:2/3;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg></div>`;
 
-  return `<div class="card" onclick="openDetail(${item.id},'${item.type}',true)">
+  return `<div class="card" onclick="openDetail(${item.id},'${item.type}',true)" tabindex="0" role="button">
     ${removeBtn}
     ${poster ? `<img class="card-poster" src="${poster}" alt="${item.title}" loading="lazy">` : fallbackIcon}
     ${prog > 0 ? `<div class="card-progress"><div class="card-progress-fill" style="width:${prog}%"></div></div>` : ''}
@@ -234,7 +270,7 @@ function makeListCard(item, showRemove = false) {
 
   const fallbackIcon = `<div class="card-poster" style="background:var(--glass-bg);display:flex;align-items:center;justify-content:center;aspect-ratio:2/3;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg></div>`;
 
-  return `<div class="card" onclick="openDetail(${item.id},'${item.type}',true)">
+  return `<div class="card" onclick="openDetail(${item.id},'${item.type}',true)" tabindex="0" role="button">
     ${removeBtn}
     ${poster ? `<img class="card-poster" src="${poster}" alt="${item.title}" loading="lazy">` : fallbackIcon}
     ${prog > 0 ? `<div class="card-progress"><div class="card-progress-fill" style="width:${prog}%"></div></div>` : ''}
@@ -420,12 +456,17 @@ async function loadEpisodes(tvId,season){
     const d=await tmdb(`/tv/${tvId}/season/${season}`);
     const eps=d.episodes||[];
     el.innerHTML=`<div class="episodes-grid">${eps.map(ep=>{
+      const epKey=`${tvId}_s${season}e${ep.episode_number}`;
       const thumb=ep.still_path?`${IMG}w400${ep.still_path}`:'';
-      const prog=getProgress(`${tvId}_s${season}e${ep.episode_number}`);
-      return`<div class="episode-card" onclick="playEpisode(${tvId},${season},${ep.episode_number},'${(ep.name||'').replace(/'/g,"\\'")}', true)">
+      const prog=getProgress(epKey);
+      const watched=isWatched(epKey);
+      return`<div class="episode-card" onclick="playEpisode(${tvId},${season},${ep.episode_number},'${(ep.name||'').replace(/'/g,"\\'")}', true)" tabindex="0" role="button">
         <div class="episode-thumb-wrap">
           ${thumb?`<img class="episode-thumb" src="${thumb}" alt="${ep.name}" loading="lazy">`:`<div class="episode-thumb skeleton" style="height:100%"></div>`}
           <div class="episode-num">E${ep.episode_number}</div>
+          <button class="episode-watched-btn${watched?' checked':''}" onclick="toggleWatched(event,'${epKey}')" aria-label="${watched?'Mark as unwatched':'Mark as watched'}" title="Mark as watched">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
           <div class="episode-play-icon">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           </div>
@@ -582,6 +623,9 @@ function toggleSearch(){
 function closeSearch(){
   document.getElementById('searchBox').classList.remove('open');
   document.getElementById('searchInput').value='';
+  document.getElementById('searchInput').blur();
+  const toggleBtn=document.getElementById('searchToggleBtn');
+  if(toggleBtn) toggleBtn.focus();
   showHome();
 }
 
@@ -677,10 +721,11 @@ function removeFromRecent(e, id) {
 
 function staggerCards(container) {
   if (!container) return;
-  
+  if (document.documentElement.classList.contains('low-power')) return;
+
   Array.from(container.children).forEach((child, idx) => {
-    child.style.animationDelay = `${idx * 20}ms`; 
-    child.style.pointerEvents = 'none'; 
+    child.style.animationDelay = `${idx * 20}ms`;
+    child.style.pointerEvents = 'none';
     child.addEventListener('animationend', () => {
       child.style.animation = 'none';
       child.style.pointerEvents = 'auto';
@@ -701,3 +746,72 @@ async function init(){
   handleUrlRouting();
 }
 init();
+
+/* TV remote D-pad navigation: arrow keys move focus between interactive
+   elements geometrically instead of relying on the emulated mouse cursor. */
+function getFocusCandidates(){
+  return Array.from(document.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )).filter(el =>
+    !el.classList.contains('remove-recent-btn') &&
+    !el.classList.contains('episode-watched-btn') &&
+    el.id !== 'searchInput' &&
+    !el.closest('.switch') &&
+    el.offsetParent !== null
+  );
+}
+
+function navigateFocus(dir){
+  const candidates = getFocusCandidates();
+  if(!candidates.length) return;
+  const current = document.activeElement;
+  if(!current || current === document.body || !candidates.includes(current)){
+    candidates[0].focus();
+    return;
+  }
+  const curRect = current.getBoundingClientRect();
+  const cx = curRect.left + curRect.width/2, cy = curRect.top + curRect.height/2;
+  let best = null, bestScore = Infinity;
+  for(const el of candidates){
+    if(el === current) continue;
+    const r = el.getBoundingClientRect();
+    const ex = r.left + r.width/2, ey = r.top + r.height/2;
+    const dx = ex - cx, dy = ey - cy;
+    let pass, primary, secondary;
+    if(dir === 'left'){ pass = dx < -4; primary = -dx; secondary = Math.abs(dy); }
+    else if(dir === 'right'){ pass = dx > 4; primary = dx; secondary = Math.abs(dy); }
+    else if(dir === 'up'){ pass = dy < -4; primary = -dy; secondary = Math.abs(dx); }
+    else { pass = dy > 4; primary = dy; secondary = Math.abs(dx); }
+    if(!pass) continue;
+    const score = primary + secondary * 2;
+    if(score < bestScore){ bestScore = score; best = el; }
+  }
+  if(best) best.focus();
+}
+
+document.addEventListener('keydown', (e) => {
+  const activeTag = document.activeElement ? document.activeElement.tagName : '';
+  if(activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+
+  if(e.key === 'Enter' || e.key === ' '){
+    const el = document.activeElement;
+    const role = el && el.getAttribute && el.getAttribute('role');
+    if(role === 'button' || role === 'switch'){
+      e.preventDefault();
+      el.click();
+    }
+    return;
+  }
+
+  const dirMap = {ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right'};
+  const dir = dirMap[e.key];
+  if(!dir) return;
+  e.preventDefault();
+  navigateFocus(dir);
+});
+
+document.addEventListener('focusin', (e) => {
+  if(e.target && e.target.scrollIntoView){
+    e.target.scrollIntoView({behavior:'smooth', block:'nearest', inline:'nearest'});
+  }
+});
