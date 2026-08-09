@@ -25,7 +25,7 @@ function toggleWatched(e,id){
 function saveRecent(item){
   let l=getRecent();
   const existing = l.find(i => String(i.id) === String(item.id));
-  if(existing) item = { ...existing, ...item };
+  if(existing) item = { ...existing, ...item, poster: item.poster || existing.poster };
   l=l.filter(i=>String(i.id)!==String(item.id));
   l.unshift(item);
   if(l.length>20)l=l.slice(0,20);
@@ -571,7 +571,7 @@ function playMovie(id, title, posterPath = '', pushState = true){
     src = `https://vidsrcme.ru/embed/movie/${id}`;
   }
   openPlayer(src, title||'', pushState);
-  if (currentMediaMeta && currentMediaMeta.id === id) {
+  if (currentMediaMeta && String(currentMediaMeta.id) === String(id)) {
     saveRecent(currentMediaMeta);
   } else {
     saveRecent({id, type:'movie', title, year:'', poster: posterPath});
@@ -592,7 +592,7 @@ function playEpisode(tvId,season,ep,epName, pushState = true){
     src = `https://vidsrcme.ru/embed/tv/${tvId}/${season}/${ep}`;
   }
   openPlayer(src,`S${season} E${ep} – ${epName||''}`, pushState);
-  if (currentMediaMeta && currentMediaMeta.id === tvId) {
+  if (currentMediaMeta && String(currentMediaMeta.id) === String(tvId)) {
     saveRecent(currentMediaMeta);
     renderRecent();
   }
