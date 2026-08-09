@@ -124,7 +124,7 @@ function setPlayer(player, save = true) {
   document.getElementById('card-' + player).classList.add('active');
   const check = document.getElementById('check-' + player);
   if (check) check.style.opacity = '1';
-  if (save) showToast(`Player set to ${player === 'vidking' ? 'VidKing' : 'VidSrc'}`);
+  if (save) showToast(`Player set to ${player === 'vidking' ? 'VidKing' : player === 'vidsrc' ? 'VidSrc' : 'MoviesAPI'}`);
 }
 window.addEventListener('scroll',()=>{
   document.getElementById('mainNav').classList.toggle('scrolled',window.scrollY>20);
@@ -302,18 +302,72 @@ async function loadHero(){
     heroItems=(d.results||[]).slice(0,6);
     if(!heroItems.length)return;
     renderHeroIndicators();setHero(0);
-    heroTimer=setInterval(()=>setHero((currentHeroIdx+1)%heroItems.length),7000);
+    resetHeroTimer();
   }catch{}
+}
+
+const HERO_IDLE_MS=5000;
+function resetHeroTimer(){
+  clearTimeout(heroTimer);
+  heroTimer=setTimeout(()=>{
+    if(heroItems.length){
+      setHero((currentHeroIdx+1)%heroItems.length);
+    }
+    resetHeroTimer();
+  },HERO_IDLE_MS);
+}
+
+function nextHero(){
+  if(!heroItems.length)return;
+  setHero((currentHeroIdx+1)%heroItems.length);
+  resetHeroTimer();
+}
+
+function prevHero(){
+  if(!heroItems.length)return;
+  setHero((currentHeroIdx-1+heroItems.length)%heroItems.length);
+  resetHeroTimer();
 }
 
 function renderHeroIndicators(){
   const el=document.getElementById('heroIndicators');
-  el.innerHTML=heroItems.map((_,i)=>`<button class="hero-dot-btn${i===0?' active':''}" onclick="setHero(${i})"></button>`).join('');
+  el.innerHTML=heroItems.map((_,i)=>`<button class="hero-dot-btn${i===0?' active':''}" onclick="setHero(${i});resetHeroTimer()" aria-label="Go to slide ${i+1}"><span class="hero-dot-bar"></span></button>`).join('');
+}
+
+function heroMediaObj(){
+  if(!heroItem)return null;
+  return {id:heroItem.id,type:'movie',title:heroItem.title||heroItem.name||'Untitled',poster:heroItem.poster_path,rating:heroItem.vote_average,year:(heroItem.release_date||'').slice(0,4)};
+}
+
+function toggleHeroBookmark(){
+  if(!heroItem)return;
+  let list=getMyList();
+  const exists=list.find(i=>String(i.id)===String(heroItem.id));
+  if(exists){
+    list=list.filter(i=>String(i.id)!==String(heroItem.id));
+    showToast(`"${heroItem.title||heroItem.name}" removed from your list`);
+  }else{
+    list.unshift(heroMediaObj());
+    showToast(`"${heroItem.title||heroItem.name}" saved to your list`);
+  }
+  setSaved('sv_mylist',list);
+  renderMyListRow();
+  updateHeroBookmarkBtn();
+}
+
+function updateHeroBookmarkBtn(){
+  const btn=document.getElementById('heroBookmarkBtn');
+  if(!btn||!heroItem)return;
+  const inList=getMyList().some(i=>String(i.id)===String(heroItem.id));
+  btn.innerHTML=inList
+    ?`<svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`
+    :`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
 }
 
 async function setHero(idx){
   currentHeroIdx=idx;heroItem=heroItems[idx];
   document.querySelectorAll('.hero-dot-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  updateHeroBookmarkBtn();
   const bg=document.getElementById('heroBg');
   if(heroItem.backdrop_path){
     const heroSize = window.innerWidth <= 860 ? 'w780' : 'original';
@@ -511,6 +565,8 @@ function playMovie(id, title, posterPath = '', pushState = true){
   let src = '';
   if (activePlayer === 'vidking') {
     src = `https://www.vidking.net/embed/movie/${id}?color=${COLOR}&autoPlay=true`;
+  } else if (activePlayer === 'moviesapi') {
+    src = `https://moviesapi.to/movie/${id}`;
   } else {
     src = `https://vidsrcme.ru/embed/movie/${id}`;
   }
@@ -530,6 +586,8 @@ function playEpisode(tvId,season,ep,epName, pushState = true){
   let src = '';
   if (activePlayer === 'vidking') {
     src = `https://www.vidking.net/embed/tv/${tvId}/${season}/${ep}?color=${COLOR}&autoPlay=true&nextEpisode=true&episodeSelector=true`;
+  } else if (activePlayer === 'moviesapi') {
+    src = `https://moviesapi.to/tv/${tvId}-${season}-${ep}`;
   } else {
     src = `https://vidsrcme.ru/embed/tv/${tvId}/${season}/${ep}`;
   }
@@ -543,7 +601,7 @@ function playEpisode(tvId,season,ep,epName, pushState = true){
 function openPlayer(src, label, pushState = true){
   switchPage('playerPage');
   document.getElementById('playerFrameWrap').innerHTML = `
-    <iframe id="playerFrame" src="${src}" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="autoplay; fullscreen"></iframe>
+    <iframe id="playerFrame" src="${src}" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer" loading="eager"></iframe>
   `;
   
   document.getElementById('playerTitleText').textContent=label;
@@ -732,6 +790,14 @@ function staggerCards(container) {
     }, { once: true });
   });
 }
+
+(function watchHeroActivity(){
+  const heroEl=document.getElementById('hero');
+  if(!heroEl)return;
+  ['mousemove','mouseenter','click','touchstart','keydown','focusin'].forEach(evt=>{
+    heroEl.addEventListener(evt,resetHeroTimer);
+  });
+})();
 
 async function init(){
   renderRecent();renderMyListRow();loadHero();

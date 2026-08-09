@@ -401,13 +401,39 @@ nav.scrolled{
   padding: 11px 14px;
 }
 
-.hero-indicators{position:absolute;bottom:32px;right:64px;display:flex;gap:8px;z-index:2}
+.hero-indicators{position:absolute;bottom:32px;right:64px;display:flex;gap:4px;z-index:2}
 .hero-dot-btn{
-  width:24px;height:3px;border-radius:99px;
-  background:rgba(255,255,255,0.2);border:none;cursor:pointer;
+  width:32px;height:24px;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  background:none;border:none;cursor:pointer;
+}
+.hero-dot-bar{
+  display:block;width:24px;height:3px;border-radius:99px;
+  background:rgba(255,255,255,0.2);
   transition:all var(--tr);
 }
-.hero-dot-btn.active{background:var(--accent);width:44px;box-shadow:0 0 12px rgba(232,39,26,0.6);animation:dotGrow 2s ease-in-out infinite;}
+.hero-dot-btn:hover .hero-dot-bar{background:rgba(255,255,255,0.45)}
+.hero-dot-btn.active .hero-dot-bar{background:var(--accent);width:44px;box-shadow:0 0 12px rgba(232,39,26,0.6);animation:dotGrow 2s ease-in-out infinite;}
+.hero-dot-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:99px;}
+
+.hero-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:52px;height:52px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.14);
+  backdrop-filter:var(--blur-sm);
+  -webkit-backdrop-filter:var(--blur-sm);
+  color:#fff;cursor:pointer;z-index:3;
+  opacity:0.5;
+  transition:all var(--tr);
+}
+.hero:hover .hero-arrow{opacity:1}
+.hero-arrow:hover{background:var(--accent);border-color:rgba(232,39,26,0.5);box-shadow:0 0 24px rgba(232,39,26,0.4);opacity:1}
+.hero-arrow:focus-visible{opacity:1;outline:3px solid var(--accent);outline-offset:3px;}
+.hero-arrow-left{left:24px}
+.hero-arrow-right{right:24px}
+@media(max-width:860px){.hero-arrow{display:none}}
 
 main {
   position: relative;
@@ -988,7 +1014,7 @@ button, .card, .nav-link, .btn, .row-arrow, .episode-card {
 }
 .player-options-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
 }
 
