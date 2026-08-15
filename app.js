@@ -4,7 +4,7 @@ const IMG='https://image.tmdb.org/t/p/';
 const COLOR='e8271a';
 
 let heroItems=[],currentHeroIdx=0,heroItem=null,heroTimer=null,searchTimer=null;
-let currentPlayerSeason=1,currentPlayerEpisode=1,currentMediaMeta=null;
+let currentPlayerSeason=1,currentPlayerEpisode=1,currentMediaMeta=null,currentTrailerKey=null;
 let currentView='homeContent';
 let activePlayer = getSaved('sv_player', 'vidking');
 
@@ -447,18 +447,36 @@ async function openDetail(id, type, pushState = true){
     currentMediaMeta = {id, type, title, poster: d.poster_path, rating: d.vote_average, year};
     const isInList = getMyList().some(i => String(i.id) === String(id));
 
+    const videos=d.videos?.results||[];
+    const trailer=videos.find(v=>v.site==='YouTube'&&v.type==='Trailer'&&v.official)
+      ||videos.find(v=>v.site==='YouTube'&&v.type==='Trailer')
+      ||videos.find(v=>v.site==='YouTube'&&v.type==='Teaser');
+    currentTrailerKey=trailer?trailer.key:null;
+
     document.getElementById('detailActions').innerHTML=`
       <button class="btn btn-primary" onclick="playMedia(${id},'${type}','${title.replace(/'/g,"\\'")}')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         ${prog>0?'Continue':'Play Now'}
       </button>
       <button class="btn btn-glass btn-icon" onclick="toggleMyList()" title="My List">
-        ${isInList 
-          ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>` 
+        ${isInList
+          ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`
           : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`}
       </button>
     `;
+    document.getElementById('detailTrailer').innerHTML='';
+    restoreTrailer();
     document.getElementById('detailOverview').textContent=d.overview||'No description available.';
+    const directors=type==='movie'
+      ?(d.credits?.crew||[]).filter(c=>c.job==='Director').map(c=>c.name)
+      :(d.created_by||[]).map(c=>c.name);
+    const directorEl=document.getElementById('detailDirector');
+    if(directors.length){
+      const label=type==='movie'?(directors.length>1?'Directors':'Director'):(directors.length>1?'Creators':'Creator');
+      directorEl.innerHTML=`<p class="section-label">${label}</p><div class="detail-director-names">${directors.join(', ')}</div>`;
+    } else {
+      directorEl.innerHTML='';
+    }
     const cast=(d.credits?.cast||[]).slice(0,8);
     if(cast.length){
       document.getElementById('detailCast').innerHTML=`
@@ -540,6 +558,7 @@ async function loadEpisodes(tvId,season){
 }
 
 function closeDetailBtn(){
+  stopTrailer();
   const params = new URLSearchParams(window.location.search);
   params.delete('movie');
   params.delete('tv');
@@ -552,7 +571,13 @@ function closeDetailBtn(){
   }
 }
 
+function stopTrailer(){
+  const trailerEl=document.getElementById('detailTrailer');
+  if(trailerEl) trailerEl.innerHTML='';
+}
+
 function playMedia(id,type,title,s,e){
+  stopTrailer();
   if(type==='movie') {
       playMovie(id, title, '', true);
   } else {
@@ -624,6 +649,14 @@ function closePlayerBtn(){
   params.delete('e');
   window.history.pushState(null, '', `${window.location.pathname}?${params.toString()}`);
   switchPage('detailPage');
+  restoreTrailer();
+}
+
+function restoreTrailer(){
+  const trailerEl=document.getElementById('detailTrailer');
+  if(trailerEl && currentTrailerKey){
+    trailerEl.innerHTML=`<div class="detail-trailer-wrap"><iframe src="https://www.youtube.com/embed/${currentTrailerKey}?autoplay=1&rel=0&modestbranding=1" title="Trailer" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
+  }
 }
 
 function handlePlayerMessage(event){
@@ -799,16 +832,21 @@ function staggerCards(container) {
   });
 })();
 
+function loadProviderRow(providerId){
+  fillRow('providerRow','/discover/movie',{with_watch_providers:providerId,watch_region:'US',sort_by:'popularity.desc'},'movie');
+}
+
 async function init(){
   renderRecent();renderMyListRow();loadHero();
   fillRow('trendMoviesRow','/trending/movie/day',{},'movie');
+  loadProviderRow(document.getElementById('providerSelect').value);
   fillRow('trendTVRow','/trending/tv/day',{},'tv');
   fillRow('topRatedRow','/movie/top_rated',{},'movie');
   fillRow('nowPlayingRow','/movie/now_playing',{},'movie',true);
   fillRow('actionRow','/discover/movie',{with_genres:'28,53'},'movie');
   fillRow('topTVRow','/tv/top_rated',{},'tv');
   fillRow('upcomingRow','/movie/upcoming',{},'movie',true);
-  
+
   handleUrlRouting();
 }
 init();
