@@ -1,6 +1,9 @@
 const TMDB_KEY='98ec65682824bd46bc5b926e5b267f43';
 const TMDB='https://api.themoviedb.org/3';
 const IMG='https://image.tmdb.org/t/p/';
+// Shared inline icons (same outline style as the rest of the UI; no emoji/text symbols)
+const ICON_STAR='<svg class="icon-star" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+const ICON_SHUFFLE='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>';
 // Accent color (hex, no #). Changeable in Settings; also passed to players that support theming.
 const DEFAULT_ACCENT='e8271a';
 const ACCENTS=[
@@ -438,6 +441,8 @@ function openSettings() {
   const lowPowerOn = document.documentElement.classList.contains('low-power');
   document.getElementById('lowPowerToggle').checked = lowPowerOn;
   document.getElementById('lowPowerRow').setAttribute('aria-checked', lowPowerOn);
+  document.getElementById('blockPopupsToggle').checked = blockPopupsOn();
+  document.getElementById('blockPopupsRow').setAttribute('aria-checked', blockPopupsOn());
   setPlayer(activePlayer, false);
   renderAccentPicker();
 }
@@ -464,9 +469,13 @@ function switchPage(pageId) {
     const frameWrap = document.getElementById('playerFrameWrap');
     if (frameWrap) frameWrap.innerHTML = '';
     if (typeof closeServerMenu === 'function') closeServerMenu();
+    // Leaving the player any way (incl. browser Back): drop focus mode, menus, hide timer
+    stopPlayerIdle();
+    closeEpisodeMenu();
+    exitFocusMode();
   }
   currentView = pageId;
-  const pages = ['homeContent', 'searchResults', 'detailPage', 'playerPage', 'settingsPage'];
+  const pages = ['homeContent', 'searchResults', 'randomPage', 'detailPage', 'playerPage', 'settingsPage'];
   pages.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = id === pageId ? 'block' : 'none';
@@ -554,7 +563,7 @@ function makeCard(item,type){
     ${prog>0?`<div class="card-progress"><div class="card-progress-fill" style="width:${prog}%"></div></div>`:''}
     <div class="card-info">
       <div class="card-title">${title}</div>
-      <div class="card-meta"><span class="card-rating">★ ${rating}</span><span>${year}</span></div>
+      <div class="card-meta"><span class="card-rating">${ICON_STAR}${rating}</span><span>${year}</span></div>
     </div>
   </div>`;
 }
@@ -629,9 +638,10 @@ function appendHtml(container,html){
   return els;
 }
 
-async function fillRow(rowId,path,params={},type='movie',wide=false){
+// opts.shuffle: shuffle each loaded page so the row doesn't always open on the same titles
+async function fillRow(rowId,path,params={},type='movie',wide=false,opts={}){
   const row=document.getElementById(rowId);if(!row)return;
-  const feed=rowFeeds[rowId]={path,params,type,wide,page:0,totalPages:1,loading:false,seen:new Set(),token:Symbol()};
+  const feed=rowFeeds[rowId]={path,params,type,wide,shuffle:!!opts.shuffle,page:0,totalPages:1,loading:false,seen:new Set(),token:Symbol()};
   skeletonRow(row);
   row.scrollLeft=0;
   if(!row.dataset.feedBound){
@@ -664,6 +674,7 @@ async function loadRowPage(rowId,feed,first=false){
     feed.page++;
     feed.totalPages=d.total_pages||feed.page;
     const items=(d.results||[]).filter(i=>!feed.seen.has(i.id)&&feed.seen.add(i.id));
+    if(feed.shuffle) shuffleInPlace(items);
     const html=items.map(i=>feed.wide?makeWideCard(i,feed.type):makeCard(i,feed.type)).join('');
     if(first){ row.innerHTML=html; staggerCards(row); }
     else { skels.forEach(s=>s.remove()); staggerCards(row,appendHtml(row,html)); }
@@ -675,6 +686,11 @@ async function loadRowPage(rowId,feed,first=false){
     feed.loading=false;
   }
   maybeLoadMoreRow(rowId); // wide screens: keep filling if the row still isn't scrollable
+}
+
+function shuffleInPlace(a){
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
 }
 
 function maybeLoadMoreRow(rowId){
@@ -838,7 +854,7 @@ function buildDetailTags(d,type,{year,runtime}){
 let detailCameFrom=null;
 
 async function openDetail(id, type, pushState = true){
-  if(currentView==='homeContent'||currentView==='searchResults'){
+  if(currentView==='homeContent'||currentView==='searchResults'||currentView==='randomPage'){
     detailCameFrom={view:currentView,scrollY:window.scrollY};
   }
   switchPage('detailPage');
@@ -1045,15 +1061,19 @@ function enableDragScroll(el){
   el.addEventListener('dragstart',e=>e.preventDefault());
 }
 
-// Season tab arrows: scroll by most of the visible width.
-function scrollSeasons(dir){
-  const tabs=document.getElementById('seasonTabs');
+// Tab-strip arrows (seasons, genre chips): scroll by most of the visible width.
+function scrollTabStrip(tabsId,dir){
+  const tabs=document.getElementById(tabsId);
   if(tabs) tabs.scrollBy({left:dir*tabs.clientWidth*0.7,behavior:'smooth'});
 }
+function scrollSeasons(dir){ scrollTabStrip('seasonTabs',dir); }
+function scrollGenreChips(dir){ scrollTabStrip('genreChips',dir); }
 
 // Show the arrows only when the tabs overflow; dim the one at the end you've reached.
-function updateSeasonArrows(){
-  const wrap=document.getElementById('seasonTabsWrap'),tabs=document.getElementById('seasonTabs');
+function updateSeasonArrows(){ updateTabArrows('seasonTabsWrap','seasonTabs'); }
+function updateGenreArrows(){ updateTabArrows('genreChipsWrap','genreChips'); }
+function updateTabArrows(wrapId,tabsId){
+  const wrap=document.getElementById(wrapId),tabs=document.getElementById(tabsId);
   if(!wrap||!tabs) return;
   const overflow=tabs.scrollWidth>tabs.clientWidth+2;
   wrap.classList.toggle('has-overflow',overflow);
@@ -1063,7 +1083,7 @@ function updateSeasonArrows(){
     b.disabled=off;
   });
 }
-window.addEventListener('resize',updateSeasonArrows);
+window.addEventListener('resize',()=>{updateSeasonArrows();updateGenreArrows();});
 
 async function selectSeason(tvId,num,btn){
   document.querySelectorAll('.season-tab').forEach(b=>b.classList.remove('active'));
@@ -1200,13 +1220,30 @@ function playEpisode(tvId,season,ep,epName, pushState = true){
 
 let playingServerId=null,playerLoadToken=0;
 
+// ---- Pop-up ad blocking ----
+// We can't reach inside the players (other sites' iframes) the way an ad-block extension
+// can, but the browser's iframe `sandbox` lets us choose what the player may do. Leaving
+// out allow-popups and allow-top-navigation stops ad tabs/windows and page redirects;
+// video, fullscreen and the progress messages keep working. Some players refuse to run
+// sandboxed, so it's a setting (off by default — turn it on in Settings).
+const PLAYER_SANDBOX='allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock allow-orientation-lock';
+function blockPopupsOn(){ return getSaved('sv_block_popups',false)===true; }
+function toggleBlockPopups(){
+  const on=document.getElementById('blockPopupsToggle').checked;
+  setSaved('sv_block_popups',on);
+  document.getElementById('blockPopupsRow')?.setAttribute('aria-checked',on);
+  showToast(on?'Pop-up ad blocking on':'Pop-up ad blocking off');
+  if(currentView==='playerPage') replayCurrent(); // apply to what's playing now
+}
+
 function renderPlayerFrame(src,server){
   const scale = server.scale || 1;
   const scaleStyle = scale !== 1
     ? `style="width:${100/scale}%;height:${100/scale}%;transform:scale(${scale});transform-origin:0 0"`
     : '';
+  const sandbox = blockPopupsOn() ? `sandbox="${PLAYER_SANDBOX}"` : '';
   document.getElementById('playerFrameWrap').innerHTML = `
-    <iframe id="playerFrame" src="${src}" ${scaleStyle} frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer" loading="eager"></iframe>
+    <iframe id="playerFrame" src="${src}" ${scaleStyle} ${sandbox} frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer" loading="eager"></iframe>
   `;
   playingServerId=server.id;
   renderServerMenu();
@@ -1235,6 +1272,8 @@ function openPlayer(src, label, pushState = true, opts = {}){
   resetPlayerTitle(label);
   resetEpisodeVote();
   renderServerMenu();
+  updateEpisodeSwitcher();
+  playerUiActive();
   window.addEventListener('message',handlePlayerMessage);
   
   if (pushState) {
@@ -1249,6 +1288,9 @@ function openPlayer(src, label, pushState = true, opts = {}){
 function closePlayerBtn(){
   playerLoadToken++;          // ignore an AniList lookup that finishes after closing
   playingServerId = null;
+  stopPlayerIdle();
+  closeEpisodeMenu();
+  exitFocusMode();
   document.getElementById('playerFrameWrap').innerHTML = '';
   closeServerMenu();
   resetEpisodeVote();
@@ -1292,6 +1334,7 @@ function toggleServerMenu(e){
   if(e) e.stopPropagation();
   const menu=document.getElementById('serverMenu');
   const open=!menu.classList.contains('open');
+  if(open&&typeof closeEpisodeMenu==='function') closeEpisodeMenu();
   menu.classList.toggle('open',open);
   document.getElementById('serverBtn').setAttribute('aria-expanded',open);
 }
@@ -1381,6 +1424,177 @@ function switchServer(player){
   }
   replayCurrent();
 }
+
+// ---- Player: episode picker ----
+// "Episodes" dropdown in the player header (TV only): pick a season, jump to any episode.
+const seasonDataCache={};
+function getSeasonData(tvId,season){
+  const k=`${tvId}_${season}`;
+  if(!seasonDataCache[k]) seasonDataCache[k]=tmdb(`/tv/${tvId}/season/${season}`).catch(err=>{delete seasonDataCache[k];throw err;});
+  return seasonDataCache[k];
+}
+const escHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let episodeMenuSeason=null;
+
+function updateEpisodeSwitcher(){
+  const sw=document.getElementById('episodeSwitcher');
+  if(!sw) return;
+  const isTv=lastPlayback?.kind==='tv'&&currentSeasons&&currentMediaMeta&&String(currentMediaMeta.id)===String(lastPlayback.tvId);
+  sw.hidden=!isTv;
+  closeEpisodeMenu();
+}
+function toggleEpisodeMenu(e){
+  if(e) e.stopPropagation();
+  const menu=document.getElementById('episodeMenu');
+  const open=!menu.classList.contains('open');
+  if(open){
+    closeServerMenu();
+    const sel=document.getElementById('episodeMenuSeason');
+    const seasons=(currentSeasons||[]).filter(s=>s.season_number>0);
+    sel.innerHTML=seasons.map(s=>`<option value="${s.season_number}">Season ${s.season_number}</option>`).join('');
+    sel.hidden=seasons.length<2;
+    renderEpisodeMenu(+currentPlayerSeason||seasons[0]?.season_number||1);
+  }
+  menu.classList.toggle('open',open);
+  document.getElementById('episodePickerBtn').setAttribute('aria-expanded',open);
+  playerUiActive();
+}
+function closeEpisodeMenu(){
+  document.getElementById('episodeMenu')?.classList.remove('open');
+  document.getElementById('episodePickerBtn')?.setAttribute('aria-expanded','false');
+}
+async function renderEpisodeMenu(season){
+  if(!lastPlayback||lastPlayback.kind!=='tv') return;
+  const tvId=lastPlayback.tvId;
+  const list=document.getElementById('episodeMenuList');
+  episodeMenuSeason=season;
+  document.getElementById('episodeMenuSeason').value=season;
+  list.innerHTML='<div class="episode-menu-empty"><div class="spinner"></div></div>';
+  try{
+    const d=await getSeasonData(tvId,season);
+    if(episodeMenuSeason!==season) return; // switched season while loading
+    list.innerHTML=(d.episodes||[]).map(ep=>{
+      const n=ep.episode_number;
+      const current=+season===+currentPlayerSeason&&n===+currentPlayerEpisode;
+      const watched=isWatched(`${tvId}_s${season}e${n}`);
+      const thumb=ep.still_path?`<img class="episode-option-thumb" src="${IMG}w185${ep.still_path}" alt="" loading="lazy">`:'<span class="episode-option-thumb"></span>';
+      return `<button class="server-option episode-option${current?' active':''}" role="menuitem" data-name="${escHtml(ep.name||'')}" onclick="pickEpisodeFromMenu(${season},${n},this.dataset.name)">
+        ${thumb}
+        <span class="episode-option-num">E${n}</span>
+        <span class="episode-option-title">${escHtml(ep.name||'Episode '+n)}</span>
+        ${watched?'<span class="episode-option-tick" aria-label="Watched"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>':''}
+      </button>`;
+    }).join('')||'<div class="episode-menu-empty">No episodes</div>';
+    // Center the current episode in the list (scrolls only the menu)
+    const cur=list.querySelector('.active');
+    if(cur) list.scrollTop=cur.offsetTop-list.clientHeight/2+cur.offsetHeight/2;
+  }catch{
+    list.innerHTML='<div class="episode-menu-empty">Couldn\'t load episodes</div>';
+  }
+}
+function pickEpisodeFromMenu(season,ep,name){
+  closeEpisodeMenu();
+  if(!lastPlayback||lastPlayback.kind!=='tv') return;
+  playEpisode(lastPlayback.tvId,season,ep,name,false);
+  // Keep the address bar in sync without adding a history entry per episode
+  const params=new URLSearchParams(window.location.search);
+  params.set('s',season);params.set('e',ep);
+  window.history.replaceState(window.history.state,'',`${window.location.pathname}?${params.toString()}`);
+}
+
+// ---- Player: auto-hide header ----
+// The header fades out after a few seconds. Mouse movement over the video itself happens
+// inside the player's iframe and never reaches us, so the header comes back when the
+// pointer reaches the top edge (the header area) — or on any key press.
+const PLAYER_IDLE_MS=3500,FOCUS_IDLE_MS=1500;
+let playerIdleTimer=null,playerHeaderHovered=false;
+
+function playerHeaderEl(){ return document.querySelector('#playerPage .player-header'); }
+function playerUiActive(){
+  const page=document.getElementById('playerPage');
+  if(!page) return;
+  page.classList.remove('ui-idle');
+  schedulePlayerIdle();
+}
+function schedulePlayerIdle(){
+  clearTimeout(playerIdleTimer);
+  const page=document.getElementById('playerPage');
+  playerIdleTimer=setTimeout(()=>{
+    if(currentView!=='playerPage'||playerHeaderHovered) return;
+    // Keep it up while a menu is open or a header button has keyboard focus
+    const menuOpen=document.querySelector('#serverMenu.open, #episodeMenu.open');
+    const kbdFocus=playerHeaderEl()?.contains(document.activeElement)&&document.activeElement.matches(':focus-visible');
+    if(menuOpen||kbdFocus){ schedulePlayerIdle(); return; }
+    page.classList.add('ui-idle');
+  },page?.classList.contains('focus-mode')?FOCUS_IDLE_MS:PLAYER_IDLE_MS);
+}
+function stopPlayerIdle(){
+  clearTimeout(playerIdleTimer);
+  playerHeaderHovered=false;
+  document.getElementById('playerPage')?.classList.remove('ui-idle');
+}
+
+// ---- Player: focus mode ----
+// Fullscreens the whole player page (not just the video), hiding the browser's tabs and
+// address bar while StreamHub's header stays usable; the header also hides faster.
+function toggleFocusMode(){
+  const page=document.getElementById('playerPage');
+  const fsEl=document.fullscreenElement||document.webkitFullscreenElement;
+  if(fsEl){
+    (document.exitFullscreen||document.webkitExitFullscreen)?.call(document);
+    return;
+  }
+  const req=page.requestFullscreen||page.webkitRequestFullscreen;
+  if(!req){ showToast('Focus mode isn\'t supported in this browser'); return; }
+  try{
+    const p=req.call(page);
+    if(p&&p.catch) p.catch(()=>showToast('Focus mode isn\'t available here'));
+  }catch{ showToast('Focus mode isn\'t available here'); }
+}
+function onFullscreenChange(){
+  const page=document.getElementById('playerPage');
+  const on=(document.fullscreenElement||document.webkitFullscreenElement)===page;
+  page.classList.toggle('focus-mode',on);
+  const btn=document.getElementById('focusBtn');
+  if(btn){ btn.setAttribute('aria-pressed',on); btn.title=on?'Exit focus mode (T / Esc)':'Focus mode (T)'; }
+  playerUiActive();
+}
+function exitFocusMode(){
+  const page=document.getElementById('playerPage');
+  if((document.fullscreenElement||document.webkitFullscreenElement)===page){
+    (document.exitFullscreen||document.webkitExitFullscreen)?.call(document);
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const page=document.getElementById('playerPage'),header=playerHeaderEl();
+  if(!page||!header) return;
+  header.addEventListener('mouseenter',()=>{ playerHeaderHovered=true; clearTimeout(playerIdleTimer); page.classList.remove('ui-idle'); });
+  header.addEventListener('mouseleave',()=>{ playerHeaderHovered=false; schedulePlayerIdle(); });
+  // Touch: a tap on the (hidden) header area brings it back without pressing a button
+  header.addEventListener('touchstart',e=>{
+    if(page.classList.contains('ui-idle')){ e.preventDefault(); playerUiActive(); }
+    else schedulePlayerIdle();
+  },{passive:false});
+  page.addEventListener('mousemove',playerUiActive); // e.g. over the loading screen
+  // Wake layer (only clickable while hidden): first move or tap over the video shows the
+  // controls; the layer then stops catching events so the player gets them again.
+  const wake=document.getElementById('playerWake');
+  if(wake){
+    wake.addEventListener('mousemove',playerUiActive);
+    wake.addEventListener('mousedown',playerUiActive);
+    wake.addEventListener('touchstart',e=>{ e.preventDefault(); playerUiActive(); },{passive:false});
+  }
+  document.addEventListener('keydown',e=>{
+    if(currentView!=='playerPage') return;
+    if(e.target.closest?.('input,select,textarea')) return;
+    if((e.key==='t'||e.key==='T')&&!e.ctrlKey&&!e.metaKey&&!e.altKey){ e.preventDefault(); toggleFocusMode(); }
+    playerUiActive();
+  });
+  document.addEventListener('fullscreenchange',onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange',onFullscreenChange);
+  document.addEventListener('click',e=>{ if(!e.target.closest('.episode-switcher')) closeEpisodeMenu(); });
+});
 
 function toggleAnimeTrack(){
   const next=getAnimeTrack()==='dub'?'sub':'dub';
@@ -1750,31 +1964,8 @@ function seeAllRow(rowId,title){
   if(!feed) return;
   const fromHome=currentView==='homeContent';
   const scrollY=window.scrollY;
-  if(rowId==='providerRow'){
-    const sel=document.getElementById('providerSelect');
-    title=`Popular on ${sel.options[sel.selectedIndex].text}`;
-  }
   loadGridData(title,[{path:feed.path,params:feed.params,type:feed.type}],null);
   if(fromHome) gridReturnScroll=scrollY;
-  if(rowId==='providerRow') renderProviderControl();
-}
-
-// Streaming-service dropdown on the "Popular on …" page. Mirrors the home row's dropdown,
-// so changing it here also updates the home row.
-function renderProviderControl(){
-  const homeSel=document.getElementById('providerSelect');
-  document.getElementById('gridControls').innerHTML=`
-    <select class="provider-select" id="gridProviderSelect" aria-label="Choose streaming service" onchange="changeGridProvider(this.value)">
-      ${Array.from(homeSel.options).map(o=>`<option value="${o.value}"${o.value===homeSel.value?' selected':''}>${o.text}</option>`).join('')}
-    </select>`;
-}
-function changeGridProvider(value){
-  const homeSel=document.getElementById('providerSelect');
-  homeSel.value=value;
-  const y=gridReturnScroll;               // keep where Back should return to
-  loadProviderRow(value);                 // keep the home row in sync
-  seeAllRow('providerRow');               // reload this page for the new service
-  gridReturnScroll=y;
 }
 
 // Back from a grid page: return to the home page where you left it.
@@ -1784,6 +1975,379 @@ function backFromGrid(){
   showHome();
   if(y!=null) requestAnimationFrame(()=>window.scrollTo(0,y));
   gridReturnScroll=null;
+}
+
+// ---- Browse by genre ----
+// Home shows the shared GENRES list as chips (Movies or TV); "See all" opens an endless grid of that
+// genre with a Movies/TV switch, a genre dropdown and a random-pick button.
+// TMDB's own genre lists are still used to show a random pick's genre names.
+const genreLists={}; // 'movie' | 'tv' -> Promise<[{id,name}]>
+function getGenres(type){
+  if(!genreLists[type]) genreLists[type]=tmdb(`/genre/${type}/list`).then(d=>d.genres||[]).catch(err=>{delete genreLists[type];throw err;});
+  return genreLists[type];
+}
+
+// One genre list shared by Movies and TV (home chips, genre page, Surprise Me page).
+// TMDB uses different genre IDs for movies and TV, so each entry holds the `with_genres`
+// value for both ('|' = any of). Movie-only genres use the closest TV genre(s):
+// Horror -> Mystery, Thriller -> Crime/Mystery, Romance -> Drama, History -> War & Politics.
+const GENRES=[
+  {key:'action',      name:'Action',          movie:'28',    tv:'10759'},
+  {key:'adventure',   name:'Adventure',       movie:'12',    tv:'10759'},
+  {key:'animation',   name:'Animation',       movie:'16',    tv:'16'},
+  {key:'comedy',      name:'Comedy',          movie:'35',    tv:'35'},
+  {key:'crime',       name:'Crime',           movie:'80',    tv:'80'},
+  {key:'documentary', name:'Documentary',     movie:'99',    tv:'99'},
+  {key:'drama',       name:'Drama',           movie:'18',    tv:'18'},
+  {key:'family',      name:'Family',          movie:'10751', tv:'10751|10762'},
+  {key:'fantasy',     name:'Fantasy',         movie:'14',    tv:'10765'},
+  {key:'history',     name:'History',         movie:'36',    tv:'10768'},
+  {key:'horror',      name:'Horror',          movie:'27',    tv:'9648'},
+  {key:'mystery',     name:'Mystery',         movie:'9648',  tv:'9648'},
+  {key:'romance',     name:'Romance',         movie:'10749', tv:'18'},
+  {key:'scifi',       name:'Science Fiction', movie:'878',   tv:'10765'},
+  {key:'thriller',    name:'Thriller',        movie:'53',    tv:'80|9648'},
+  {key:'war',         name:'War',             movie:'10752', tv:'10768'},
+  {key:'western',     name:'Western',         movie:'37',    tv:'37'},
+];
+const findGenre=key=>GENRES.find(g=>g.key===key);
+const genreParam=(key,type)=>findGenre(key)?.[type]||null;
+// The genre chips start with "All" (no genre filter)
+const GENRE_CHIPS=[{key:'all',name:'All'},...GENRES];
+const findChip=key=>GENRE_CHIPS.find(g=>g.key===key);
+
+// Streaming services for the Browse section's filter (TMDB watch-provider IDs, US availability).
+const STREAMING_SERVICES=[
+  {id:'8',   name:'Netflix'},
+  {id:'337', name:'Disney+'},
+  {id:'1899',name:'HBO Max'},
+  {id:'9',   name:'Amazon Prime Video'},
+  {id:'350', name:'Apple TV+'},
+  {id:'15',  name:'Hulu'},
+  {id:'531', name:'Paramount+'},
+];
+const WATCH_REGION='US';
+const findService=id=>STREAMING_SERVICES.find(s=>s.id===id);
+
+// TMDB discover filters for a genre chip + streaming service ('' = any service)
+function browseFilters(type,genreKey,service){
+  const p={include_adult:false};
+  const ids=genreParam(genreKey,type);
+  if(ids) p.with_genres=ids;
+  if(findService(service)){ p.with_watch_providers=service; p.watch_region=WATCH_REGION; }
+  return p;
+}
+// e.g. "Horror Movies on Netflix", "Popular TV Shows"
+function browseTitle(type,genreKey,service){
+  const g=findGenre(genreKey),s=findService(service);
+  const what=`${g?g.name:'Popular'} ${type==='movie'?'Movies':'TV Shows'}`;
+  return s?`${what} on ${s.name}`:what;
+}
+
+// Home "Browse": genre chips + streaming-service dropdown + Movies/TV toggle all filter one row.
+// The choices stay put when switching Movies/TV, and all three are remembered.
+const GENRE_BROWSE_KEY='sv_genre_browse';
+let genreChipType='movie',genreChipSelected='action',genreChipService='';
+{
+  const saved=getSaved(GENRE_BROWSE_KEY,{});
+  if(saved.type==='movie'||saved.type==='tv') genreChipType=saved.type;
+  if(findChip(saved.genre)) genreChipSelected=saved.genre;
+  if(findService(saved.service)) genreChipService=saved.service;
+}
+function saveGenreBrowse(){ setSaved(GENRE_BROWSE_KEY,{type:genreChipType,genre:genreChipSelected,service:genreChipService}); }
+
+function renderBrowseServices(){
+  const sel=document.getElementById('browseService');
+  if(!sel) return;
+  sel.innerHTML='<option value="">All services</option>'+STREAMING_SERVICES.map(s=>`<option value="${s.id}"${s.id===genreChipService?' selected':''}>${escHtml(s.name)}</option>`).join('');
+}
+function setBrowseService(id){
+  genreChipService=findService(id)?id:'';
+  saveGenreBrowse();
+  fillGenreRow();
+}
+
+// So the row isn't the same every visit, each load picks one of these mixes at random
+// (all live TMDB queries) and shuffles the cards.
+const GENRE_ROW_MIXES=[
+  ()=>({sort_by:'popularity.desc','vote_count.gte':50}),                         // popular right now
+  type=>({sort_by:'popularity.desc','vote_count.gte':20,                         // recent releases
+          [type==='movie'?'primary_release_date.gte':'first_air_date.gte']:yearsAgo(3)}),
+  type=>({sort_by:'vote_average.desc','vote_count.gte':type==='movie'?500:200}), // top rated
+];
+function yearsAgo(n){ const d=new Date(); d.setFullYear(d.getFullYear()-n); return d.toISOString().slice(0,10); }
+
+function renderGenreChips(){
+  const el=document.getElementById('genreChips');
+  if(!el) return;
+  const sel=genreChipSelected;
+  el.innerHTML=GENRE_CHIPS.map(g=>`<button class="genre-chip${g.key===sel?' active':''}" role="tab" aria-selected="${g.key===sel}" data-key="${g.key}" onclick="selectGenreChip('${g.key}')">${escHtml(g.name)}</button>`).join('');
+  if(!el.dataset.drag){ enableDragScroll(el); el.dataset.drag='1'; }
+  // Bring the selected chip into view horizontally without scrolling the page.
+  const active=el.querySelector('.active');
+  el.scrollLeft=active?active.offsetLeft-el.offsetLeft-(el.clientWidth-active.offsetWidth)/2:0;
+  updateGenreArrows();
+  fillGenreRow();
+}
+function selectGenreChip(key){
+  genreChipSelected=key;
+  saveGenreBrowse();
+  document.querySelectorAll('#genreChips .genre-chip').forEach(b=>{
+    const on=b.dataset.key===key;
+    b.classList.toggle('active',on);b.setAttribute('aria-selected',on);
+  });
+  fillGenreRow();
+}
+let genreRowReq=0;
+async function fillGenreRow(){
+  const req=++genreRowReq,type=genreChipType;
+  const base=browseFilters(type,genreChipSelected,genreChipService);
+  const mix=GENRE_ROW_MIXES[Math.floor(Math.random()*GENRE_ROW_MIXES.length)];
+  await fillRow('genreRow',`/discover/${type}`,{...base,...mix(type)},type,false,{shuffle:true});
+  // A narrow mix (e.g. recent TV westerns on one service) can come back empty: fall back to popular.
+  const feed=rowFeeds.genreRow;
+  if(req===genreRowReq&&feed&&!feed.seen.size&&mix!==GENRE_ROW_MIXES[0]){
+    fillRow('genreRow',`/discover/${type}`,{...base,...GENRE_ROW_MIXES[0](type)},type,false,{shuffle:true});
+  }
+}
+function seeAllGenre(){
+  openGenre(genreChipType,genreChipSelected,false,genreChipService);
+}
+function setGenreChipType(type){
+  genreChipType=type;
+  saveGenreBrowse();
+  document.querySelectorAll('#homeContent .type-toggle-btn').forEach(b=>{
+    const on=b.dataset.type===type;
+    b.classList.toggle('active',on);
+    b.setAttribute('aria-checked',on);
+  });
+  renderGenreChips();
+}
+
+// The "See all" browse page. key = a GENRE_CHIPS key ('all', 'action', ...),
+// service = a STREAMING_SERVICES id or '' for any service.
+function openGenre(type,key,keepReturn,service=''){
+  const g=findChip(key);
+  if(!g) return;
+  if(!findService(service)) service='';
+  const fromHome=currentView==='homeContent';
+  const y=keepReturn?gridReturnScroll:window.scrollY;
+  loadGridData(browseTitle(type,g.key,service),[{
+    path:`/discover/${type}`,
+    params:{...browseFilters(type,g.key,service),sort_by:'popularity.desc','vote_count.gte':service?10:50},
+    type,
+  }],null);
+  if(fromHome||keepReturn) gridReturnScroll=y;
+  renderGenreControls(type,g,service);
+}
+
+// Controls on the browse page: Movies/TV switch, genre + service dropdowns, random pick
+function renderGenreControls(type,g,service){
+  const s=findService(service);
+  document.getElementById('gridControls').innerHTML=`
+    <div class="type-toggle" role="radiogroup" aria-label="Movies or TV shows">
+      <button class="type-toggle-btn${type==='movie'?' active':''}" role="radio" aria-checked="${type==='movie'}" onclick="openGenre('movie','${g.key}',true,'${service}')">Movies</button>
+      <button class="type-toggle-btn${type==='tv'?' active':''}" role="radio" aria-checked="${type==='tv'}" onclick="openGenre('tv','${g.key}',true,'${service}')">TV</button>
+    </div>
+    <select class="provider-select" aria-label="Genre" onchange="openGenre('${type}',this.value,true,'${service}')">
+      ${GENRE_CHIPS.map(x=>`<option value="${x.key}"${x.key===g.key?' selected':''}>${escHtml(x.key==='all'?'All genres':x.name)}</option>`).join('')}
+    </select>
+    <select class="provider-select" aria-label="Choose streaming service" onchange="openGenre('${type}','${g.key}',true,this.value)">
+      <option value="">All services</option>
+      ${STREAMING_SERVICES.map(x=>`<option value="${x.id}"${x.id===service?' selected':''}>${escHtml(x.name)}</option>`).join('')}
+    </select>
+    <button class="section-more grid-random-btn" title="Random pick from these titles" onclick="openRandomPick(genrePageRandomOpts)">${ICON_SHUFFLE}Surprise me</button>`;
+  genrePageRandomOpts={type,genreId:genreParam(g.key,type),providerId:service||null,
+    label:g.key==='all'?(s?s.name:''):g.name};
+}
+let genrePageRandomOpts={}; // what the genre page's "Surprise me" button picks from
+
+// ---- Random pick ("Surprise me") ----
+// Picks a random well-rated, well-known title (optionally within a genre). Shown in two
+// places that share this code: the pop-up card (genre pages' "Surprise me") and the
+// Surprise Me page. Each has its own "view" with its own element IDs and state.
+const randomPagesCache={}; // query key -> total pages (saves a request on re-rolls)
+function makeRandomView(ids){ return {ids,token:0,current:null,opts:{type:'movie'}}; }
+const randomModalView=makeRandomView({body:'randomBody',again:'randomAgainBtn',view:'randomViewBtn',play:'randomPlayBtn',list:'randomListBtn'});
+const randomPageView=makeRandomView({body:'randomPageBody',again:'randomPageAgainBtn',view:'randomPageViewBtn',play:'randomPagePlayBtn',list:'randomPageListBtn',backdrop:'randomPageBackdrop'});
+
+const ICON_BOOKMARK_OFF='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>';
+const ICON_BOOKMARK_ON='<svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>';
+
+const rvEl=(view,key)=>document.getElementById(view.ids[key]);
+function setRandomButtons(view,enabled){
+  ['view','play','list'].forEach(k=>{ const b=rvEl(view,k); if(b) b.disabled=!enabled; });
+}
+function updateRandomListBtn(view){
+  const btn=rvEl(view,'list');
+  if(!btn) return;
+  const inList=!!view.current&&getMyList().some(i=>String(i.id)===String(view.current.id));
+  btn.innerHTML=inList?ICON_BOOKMARK_ON:ICON_BOOKMARK_OFF;
+  const label=inList?'Remove from My List':'Add to My List';
+  btn.title=label;btn.setAttribute('aria-label',label);
+}
+
+// Pop-up card
+function openRandomPick(opts={}){
+  const view=randomModalView;
+  view.opts={type:'movie',...opts};
+  view.current=null;
+  const overlay=document.getElementById('randomOverlay');
+  document.getElementById('randomLabel').textContent=opts.label?`Random ${opts.label} pick`:'Random pick';
+  overlay.hidden=false;
+  requestAnimationFrame(()=>overlay.classList.add('open'));
+  rollRandomPick(view);
+}
+function closeRandomPick(){
+  const overlay=document.getElementById('randomOverlay');
+  randomModalView.token++;
+  overlay.classList.remove('open');
+  setTimeout(()=>{ if(!overlay.classList.contains('open')) overlay.hidden=true; },200);
+}
+
+async function rollRandomPick(view=randomModalView){
+  const token=++view.token;
+  const body=rvEl(view,'body');
+  setRandomButtons(view,false);
+  rvEl(view,'again').disabled=true;
+  const backdrop=rvEl(view,'backdrop'); // Surprise Me page only
+  if(backdrop){
+    // Page: a placeholder shaped like the real card (poster + text lines), old backdrop fades out
+    backdrop.classList.add('is-loading');
+    body.innerHTML=`
+      <div class="skeleton random-poster random-skel-poster" aria-hidden="true"></div>
+      <div class="random-info random-skel-info" aria-busy="true" aria-label="Finding a pick">
+        <div class="skeleton random-skel-title"></div>
+        <div class="skeleton random-skel-meta"></div>
+        <div class="skeleton random-skel-line"></div>
+        <div class="skeleton random-skel-line"></div>
+        <div class="skeleton random-skel-line"></div>
+        <div class="skeleton random-skel-line random-skel-line-short"></div>
+      </div>`;
+  } else {
+    body.innerHTML='<div class="random-loading"><div class="spinner"></div></div>';
+  }
+  const {type,genreId,providerId}=view.opts;
+  const params={sort_by:'popularity.desc','vote_count.gte':300,'vote_average.gte':6.5,include_adult:false};
+  if(genreId) params.with_genres=genreId;
+  if(providerId){ params.with_watch_providers=providerId; params.watch_region=WATCH_REGION; params['vote_count.gte']=100; }
+  const key=`${type}|${genreId||''}|${providerId||''}`;
+  try{
+    let pages=randomPagesCache[key],first=null;
+    if(!pages){
+      first=await tmdb(`/discover/${type}`,{...params,page:1});
+      pages=randomPagesCache[key]=Math.max(1,Math.min(first.total_pages||1,30)); // top ~600 titles
+    }
+    const page=1+Math.floor(Math.random()*pages);
+    const d=(page===1&&first)?first:await tmdb(`/discover/${type}`,{...params,page});
+    if(token!==view.token) return;
+    let list=(d.results||[]).filter(i=>i.poster_path&&i.id!==view.current?.id);
+    if(!list.length) list=d.results||[];
+    if(!list.length) throw new Error('empty');
+    const pick=list[Math.floor(Math.random()*list.length)];
+    let genreNames='';
+    try{ const gl=await getGenres(type); genreNames=(pick.genre_ids||[]).slice(0,3).map(id=>gl.find(g=>g.id===id)?.name).filter(Boolean).join(' · '); }catch{}
+    if(token!==view.token) return;
+    const title=pick.title||pick.name||'Untitled';
+    const year=(pick.release_date||pick.first_air_date||'').slice(0,4);
+    view.current={id:pick.id,type,title,poster:pick.poster_path,rating:pick.vote_average,year};
+    if(backdrop){
+      // Swap the backdrop only once the new image has loaded, then fade it in
+      if(pick.backdrop_path){
+        const url=`${IMG}w1280${pick.backdrop_path}`,img=new Image();
+        const show=()=>{ if(token!==view.token) return; backdrop.style.backgroundImage=`url("${url}")`; backdrop.classList.remove('is-loading'); };
+        img.onload=show; img.onerror=()=>{ if(token===view.token){ backdrop.style.backgroundImage=''; backdrop.classList.remove('is-loading'); } };
+        img.src=url;
+      } else {
+        backdrop.style.backgroundImage='';
+        backdrop.classList.remove('is-loading');
+      }
+    }
+    body.innerHTML=`
+      <img class="random-poster" src="${IMG}w342${pick.poster_path}" alt="">
+      <div class="random-info">
+        <h3 class="random-title">${escHtml(title)}</h3>
+        <div class="random-meta">${year?`<span>${year}</span>`:''}${pick.vote_average?`<span class="random-rating">${ICON_STAR}${pick.vote_average.toFixed(1)}</span>`:''}<span>${type==='movie'?'Movie':'TV Series'}</span></div>
+        ${genreNames?`<div class="random-genres">${escHtml(genreNames)}</div>`:''}
+        <p class="random-overview">${escHtml(pick.overview||'No description available.')}</p>
+      </div>`;
+    setRandomButtons(view,true);
+    updateRandomListBtn(view);
+  }catch{
+    if(token!==view.token) return;
+    if(backdrop){ backdrop.style.backgroundImage=''; backdrop.classList.remove('is-loading'); }
+    body.innerHTML='<div class="random-loading">Couldn\'t find a pick. Try again.</div>';
+  }finally{
+    if(token===view.token) rvEl(view,'again').disabled=false;
+  }
+}
+
+function viewRandomPick(view=randomModalView){
+  if(!view.current) return;
+  const {id,type}=view.current;
+  if(view===randomModalView) closeRandomPick();
+  openDetail(id,type,true);
+}
+// Play: open the title (so episode/resume/anime info is ready) and start it right away
+async function playRandomPick(view=randomModalView){
+  if(!view.current) return;
+  const {id,type}=view.current;
+  if(view===randomModalView) closeRandomPick();
+  await openDetail(id,type,true);
+  if(currentMediaMeta&&String(currentMediaMeta.id)===String(id)&&currentView==='detailPage') playFromDetail();
+}
+function toggleRandomInList(view=randomModalView){
+  const item=view.current;
+  if(!item) return;
+  let list=getMyList();
+  const exists=list.some(i=>String(i.id)===String(item.id));
+  if(exists){
+    list=list.filter(i=>String(i.id)!==String(item.id));
+    showToast(`"${item.title}" removed from your list`);
+  } else {
+    list.unshift({...item});
+    showToast(`"${item.title}" saved to your list`);
+  }
+  setSaved('sv_mylist',list);
+  renderMyListRow();
+  updateRandomListBtn(view);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const overlay=document.getElementById('randomOverlay');
+  if(!overlay) return;
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) closeRandomPick(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!overlay.hidden) closeRandomPick(); });
+});
+
+// Surprise Me page
+function showRandomPage(){
+  stopGridFeed();
+  switchPage('randomPage');
+  setActiveNav(document.getElementById('navRandom'));
+  renderRandomPageGenres();
+  if(!randomPageView.current) rollRandomPick(randomPageView);
+  else updateRandomListBtn(randomPageView); // My List may have changed meanwhile
+}
+// Same shared genre list as Browse by Genre; the chosen genre is kept when switching Movies/TV.
+let randomPageGenreKey='';
+function renderRandomPageGenres(){
+  const sel=document.getElementById('randomPageGenre');
+  sel.innerHTML='<option value="">Any genre</option>'+GENRES.map(g=>`<option value="${g.key}"${g.key===randomPageGenreKey?' selected':''}>${escHtml(g.name)}</option>`).join('');
+}
+function setRandomPageType(type){
+  randomPageView.opts={type,genreId:genreParam(randomPageGenreKey,type)};
+  document.querySelectorAll('#randomPageType .type-toggle-btn').forEach(b=>{
+    const on=b.dataset.type===type;
+    b.classList.toggle('active',on);b.setAttribute('aria-checked',on);
+  });
+  renderRandomPageGenres();
+  rollRandomPick(randomPageView);
+}
+function setRandomPageGenre(value){
+  randomPageGenreKey=value||'';
+  randomPageView.opts={...randomPageView.opts,genreId:genreParam(randomPageGenreKey,randomPageView.opts.type)};
+  rollRandomPick(randomPageView);
 }
 
 function loadGridData(title, apis, navElementId) {
@@ -1859,20 +2423,16 @@ function staggerCards(container, els) {
   });
 })();
 
-function loadProviderRow(providerId){
-  fillRow('providerRow','/discover/movie',{with_watch_providers:providerId,watch_region:'US',sort_by:'popularity.desc'},'movie');
-}
-
 async function init(){
   renderRecent();renderMyListRow();loadHero();
   fillRow('trendMoviesRow','/trending/movie/day',{},'movie');
-  loadProviderRow(document.getElementById('providerSelect').value);
   fillRow('trendTVRow','/trending/tv/day',{},'tv');
   fillRow('topRatedRow','/movie/top_rated',{},'movie');
   fillRow('nowPlayingRow','/movie/now_playing',{},'movie',true);
-  fillRow('actionRow','/discover/movie',{with_genres:'28,53'},'movie');
   fillRow('topTVRow','/tv/top_rated',{},'tv');
   fillRow('upcomingRow','/movie/upcoming',{},'movie',true);
+  renderBrowseServices();
+  setGenreChipType(genreChipType); // restores the remembered Movies/TV toggle, genre + service
 
   handleUrlRouting();
 }

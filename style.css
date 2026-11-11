@@ -609,7 +609,8 @@ main {
 .grid-page-controls:empty{display:none}
 @media (max-width: 600px){
   .section-header{flex-wrap:wrap}
-  .section-header-actions{margin-left:auto}
+  .section-header-actions{margin-left:auto;flex-wrap:wrap;justify-content:flex-end;flex-shrink:1}
+  .grid-page-controls{flex-wrap:wrap}
 }
 .section-title{
   font-family:'Bebas Neue',sans-serif;
@@ -713,7 +714,8 @@ main {
 }
 .card-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px}
 .card-meta{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px}
-.card-rating{color:var(--gold);font-weight:700}
+.card-rating{color:var(--gold);font-weight:700;display:inline-flex;align-items:center;gap:3px}
+.card-rating .icon-star{width:10px;height:10px}
 .card-badge{
   position:absolute;top:8px;left:8px;
   background:linear-gradient(135deg,var(--accent),var(--accent3));
@@ -1130,7 +1132,90 @@ main {
   transition: opacity 0.3s;
   animation: fadeInDown 0.45s cubic-bezier(0.22,1,0.36,1) 0.1s both;
 }
-.player-page:hover .player-header { opacity: 1; }
+/* Auto-hide: header fades after a few idle seconds (see playerUiActive in app.js).
+   While hidden it still covers the top strip, so hovering/tapping there brings it back;
+   its buttons ignore taps until it's visible again. */
+/* `animation: none` matters: the header's fadeInDown entrance keeps opacity:1 (fill-mode
+   both), and animation values beat normal CSS, which kept the header from ever hiding.
+   When it un-hides, the entrance animation replays as a reveal. */
+.player-page.ui-idle .player-header { animation: none; opacity: 0; transition: opacity 0.6s ease; }
+.player-page.ui-idle .player-header > * { pointer-events: none; }
+/* Wake layer over the video: ignored normally (clicks go to the player), but while the
+   controls are hidden it catches the first mouse move/tap to bring them back, and hides
+   the cursor like a video player does */
+.player-wake {
+  position: absolute;
+  inset: 0;
+  z-index: 50;            /* above the video, below the header (100) */
+  pointer-events: none;
+}
+.player-page.ui-idle .player-wake { pointer-events: auto; cursor: none; }
+
+/* Episode picker + focus buttons share the server button style */
+.episode-switcher { position: relative; margin-left: auto; }
+.episode-switcher[hidden] { display: none; }
+.episode-switcher:not([hidden]) ~ .server-switcher,
+.episode-switcher:not([hidden]) ~ .anime-track-btn { margin-left: 0; }
+.focus-btn { flex-shrink: 0; }
+.focus-btn .focus-icon-exit { display: none; }
+.player-page.focus-mode .focus-btn .focus-icon-enter { display: none; }
+.player-page.focus-mode .focus-btn .focus-icon-exit { display: block; }
+.player-page.focus-mode .focus-btn { color: var(--accent); border-color: rgba(var(--accent-rgb),0.45); }
+/* Focus mode: lighter header so it intrudes less */
+.player-page.focus-mode .player-header { background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); }
+
+/* Episode dropdown */
+.episode-menu { width: 320px; max-width: calc(100vw - 24px); padding: 8px; }
+.episode-menu-head { padding: 2px 2px 8px; }
+.episode-menu-season { width: 100%; color: #fff; background-color: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); }
+.episode-menu-season[hidden] { display: none; }
+.episode-menu-list {
+  max-height: min(380px, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+  position: relative; /* so offsetTop is measured from the list */
+}
+.episode-option { justify-content: flex-start; gap: 10px; padding: 6px 10px 6px 6px; }
+/* Small 16:9 still; plain block when the episode has no image */
+.episode-option-thumb {
+  flex-shrink: 0;
+  width: 64px;
+  height: 36px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: rgba(255,255,255,0.07);
+  display: block;
+}
+.episode-option.active .episode-option-thumb { outline: 2px solid var(--accent); outline-offset: 1px; }
+.episode-option-num {
+  flex-shrink: 0;
+  min-width: 34px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.5);
+}
+.episode-option.active .episode-option-num { color: var(--accent); }
+.episode-option-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.episode-option-tick { flex-shrink: 0; display: inline-flex; color: rgba(255,255,255,0.45); }
+.episode-option.active .episode-option-tick { color: var(--accent); }
+.episode-menu-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+}
+.episode-menu-empty .spinner { width: 26px; height: 26px; }
 
 .trailer-unmute-btn {
   position: absolute;
@@ -2063,4 +2148,327 @@ html.low-power .card:hover {
 /* Touch devices: hover-only effects shouldn't stick after a tap */
 @media (hover: none) {
   .card:hover, .episode-card:hover, .detail-back-btn:hover, .accent-swatch:hover { transform: none; }
+}
+
+/* Player header layout: the title takes the free space so the buttons line up on the right */
+.player-header { gap: 10px; }
+.player-header .player-title {
+  flex: 1;
+  min-width: 0;
+  margin-right: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-header .server-switcher,
+.player-header .episode-switcher,
+.player-header .anime-track-btn { margin-left: 0; }
+@media (max-width: 600px) {
+  .player-header .player-btn-label { display: none; }
+  .episode-menu { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; max-width: none; }
+}
+
+/* ---- Browse by genre ---- */
+/* Styled like the season tabs: one scrollable line, arrows when it overflows
+   (reuses .season-tabs-wrap / .season-arrow), drag-to-scroll with a mouse */
+.genre-tabs-wrap { margin-bottom: 10px; }
+.genre-chips {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 4px;
+  scrollbar-width: none;
+}
+.genre-chips::-webkit-scrollbar { display: none; }
+.season-tabs-wrap.has-overflow .genre-chips { cursor: grab; user-select: none; -webkit-user-select: none; }
+.season-tabs-wrap.has-overflow .genre-chips .genre-chip { cursor: inherit; }
+.genre-chips.is-dragging { cursor: grabbing !important; }
+.genre-chips.is-dragging .genre-chip { pointer-events: none; }
+.genre-chip {
+  flex-shrink: 0;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 9px;
+  color: var(--text2);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--tr);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+}
+.genre-chip:hover { background: var(--glass-bg-hover); color: var(--text); border-color: var(--glass-border-hover); }
+.genre-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[data-theme="light"] .genre-chip { background: rgba(255,255,255,0.5); border-color: var(--glass-border); }
+[data-theme="light"] .genre-chip:hover { background: rgba(255,255,255,0.75); }
+@media (max-width: 600px) {
+  .genre-chip { padding: 8px 14px; font-size: 12.5px; }
+}
+
+/* Movies / TV segmented switch (home genre section + genre page) */
+.type-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+.type-toggle-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text2);
+  font-family: 'Outfit', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--tr);
+}
+.type-toggle-btn:hover { color: var(--text); }
+.type-toggle-btn.active { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(var(--accent-rgb),0.35); }
+.type-toggle-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grid-random-btn { white-space: nowrap; }
+
+/* ---- Random pick card ---- */
+.random-modal {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  padding: 22px 22px 18px;
+  border-radius: var(--radius-lg);
+  background: rgba(18,21,40,0.94);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-lg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  transform: translateY(12px) scale(0.97);
+  transition: transform 0.22s cubic-bezier(0.22,1,0.36,1);
+}
+.confirm-overlay.open .random-modal { transform: none; }
+.random-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text2);
+  cursor: pointer;
+}
+.random-close:hover { color: var(--text); background: var(--glass-bg-hover); }
+.random-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  margin-bottom: 14px;
+}
+.random-body { display: flex; gap: 18px; min-height: 210px; }
+.random-poster {
+  width: 140px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  flex-shrink: 0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+  animation: fadeIn 0.35s ease both;
+}
+.random-info { min-width: 0; display: flex; flex-direction: column; gap: 6px; animation: fadeIn 0.35s ease both; }
+.random-title { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.5px; line-height: 1; color: var(--text); padding-right: 36px; }
+.random-meta { display: flex; gap: 10px; font-size: 13px; color: var(--text2); }
+.random-rating { color: var(--gold); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+/* Buttons with an icon + label (Pick again, Details, Play) */
+.random-actions .confirm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.random-actions .confirm-btn svg { flex-shrink: 0; }
+.random-genres { font-size: 12.5px; color: var(--text3); }
+.random-overview {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text2);
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.random-loading { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 14px; }
+.random-actions { display: flex; gap: 10px; margin-top: 18px; }
+.random-view-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent3));
+  border: 1px solid rgba(var(--accent-rgb),0.5);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(var(--accent-rgb),0.35);
+}
+.random-view-btn:hover { filter: brightness(1.08); }
+.random-actions .confirm-btn:disabled { opacity: 0.5; cursor: default; }
+[data-theme="light"] .random-modal { background: rgba(250,251,253,0.97); }
+@media (max-width: 600px) {
+  .random-modal { padding: 18px 16px 14px; }
+  .random-body { gap: 14px; min-height: 170px; }
+  .random-poster { width: 105px; }
+  .random-title { font-size: 24px; }
+  .random-overview { -webkit-line-clamp: 4; font-size: 13px; }
+}
+
+/* Genre chips as tabs: the selected one is filled with the accent */
+.genre-chip.active,
+[data-theme="light"] .genre-chip.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent3));
+  border-color: rgba(var(--accent-rgb),0.4);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(var(--accent-rgb),0.4);
+}
+.genre-row-wrap { margin-top: 6px; }
+
+/* Random card buttons: Pick again · bookmark · Details · Play */
+.random-icon-btn { flex: 0 0 48px; display: flex; align-items: center; justify-content: center; padding: 0; }
+.random-actions .confirm-btn { white-space: nowrap; }
+@media (max-width: 600px) {
+  .random-actions { flex-wrap: wrap; }
+  .random-actions .random-view-btn { order: -1; flex-basis: 100%; } /* Play on its own row, first */
+}
+
+/* ---- Surprise Me page ----
+   Header (title + filters) on top; the card fills the rest of the screen. Inside the card:
+   the pick's backdrop image behind, poster on the left, and on the right the info with the
+   buttons directly under it, centered vertically next to the poster. */
+:root {
+  --random-shade-strong: rgba(5,7,15,0.94);
+  --random-shade-soft: rgba(5,7,15,0.55);
+}
+[data-theme="light"] {
+  --random-shade-strong: rgba(246,247,250,0.96);
+  --random-shade-soft: rgba(246,247,250,0.72);
+}
+.random-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: calc(var(--nav-h) + 40px) 40px 40px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.random-page-header { margin-bottom: 22px; align-items: flex-end; }
+.random-page-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 34px;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.random-page-hint { color: var(--text3); font-size: 13px; }
+
+.random-page-card {
+  position: relative;
+  flex: 1;                         /* fill the screen below the header */
+  display: flex;
+  min-height: 460px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: var(--bg-mid);
+  box-shadow: var(--glass-shadow-lg);
+  overflow: hidden;
+}
+.random-page-backdrop {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 25%;
+  transition: opacity 0.45s ease;
+}
+.random-page-backdrop.is-loading { opacity: 0; }
+.random-page-backdrop::after {     /* darken/lighten so text stays readable */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, var(--random-shade-strong) 0%, var(--random-shade-strong) 35%, var(--random-shade-soft) 100%),
+    linear-gradient(0deg, var(--random-shade-strong) 0%, transparent 45%);
+}
+.random-page-layout {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: clamp(200px, 22vw, 300px) minmax(0, 1fr);
+  grid-template-rows: 1fr auto auto 1fr;
+  grid-template-areas:
+    "poster ."
+    "poster info"
+    "poster actions"
+    "poster .";
+  column-gap: clamp(24px, 3.5vw, 48px);
+  align-items: center;
+  padding: clamp(24px, 3.5vw, 48px);
+}
+/* The body's children (poster + info, or the loading/error message) join the grid directly */
+.random-page-layout .random-body { display: contents; }
+.random-page-layout .random-poster { grid-area: poster; width: 100%; }
+.random-page-layout .random-info { grid-area: info; gap: 10px; }
+/* Error message ("Couldn't find a pick") sits where the info goes, next to an empty poster spot */
+.random-page-layout .random-loading { grid-area: info; justify-content: flex-start; min-height: 0; font-size: 15px; }
+/* Loading placeholder: same shape as the real card so nothing jumps when the pick arrives */
+.random-skel-poster { animation: shimmer 1.6s infinite; box-shadow: none; }
+.random-skel-info { width: 100%; max-width: 75ch; }
+.random-skel-info .skeleton { border-radius: 6px; }
+.random-skel-title { height: clamp(38px, 4.2vw, 64px); width: 55%; margin-bottom: 4px; }
+.random-skel-meta { height: 14px; width: 30%; margin-bottom: 8px; }
+.random-skel-line { height: 13px; width: 100%; }
+.random-skel-line-short { width: 60%; }
+.random-page-layout .random-title { font-size: clamp(38px, 4.2vw, 64px); padding-right: 0; }
+.random-page-layout .random-meta { font-size: 15px; }
+.random-page-layout .random-genres { font-size: 14px; }
+.random-page-layout .random-overview { -webkit-line-clamp: 7; font-size: 15.5px; max-width: 75ch; margin-top: 4px; }
+.random-page-layout .random-actions { grid-area: actions; margin-top: 24px; flex-wrap: wrap; }
+/* Play first (main action), then Details, My List, Pick again; natural widths */
+.random-page-layout .random-actions .confirm-btn { flex: 0 0 auto; padding: 12px 24px; }
+.random-page-layout .random-actions .random-icon-btn { flex: 0 0 46px; padding: 0; }
+.random-page-layout .random-view-btn { order: -2; padding: 12px 32px; }
+#randomPageViewBtn { order: -1; }
+#randomPageAgainBtn { margin-left: auto; }  /* re-roll sits apart on the right */
+
+@media (max-width: 860px) {
+  .random-page { padding: calc(var(--nav-h) + 50px) 16px 24px; }
+  .random-page-layout { grid-template-columns: 180px minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .random-page-header { align-items: stretch; }
+  .random-page-card { min-height: 0; }
+  /* Poster + info side by side, buttons full width underneath */
+  .random-page-layout {
+    grid-template-columns: 110px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "poster info"
+      "actions actions";
+    column-gap: 14px;
+    align-items: start;
+    align-content: center;
+    padding: 18px 16px;
+  }
+  .random-page-layout .random-loading { font-size: 13.5px; }
+  .random-skel-title { height: 26px; width: 80%; }
+  .random-skel-meta { width: 50%; }
+  .random-skel-line { height: 11px; }
+  .random-page-layout .random-info { gap: 6px; }
+  .random-page-layout .random-title { font-size: 26px; }
+  .random-page-layout .random-meta { font-size: 13px; }
+  .random-page-layout .random-genres { font-size: 12.5px; }
+  .random-page-layout .random-overview { -webkit-line-clamp: 6; font-size: 13px; }
+  .random-page-layout .random-actions { margin-top: 18px; }
+  .random-page-layout .random-actions .confirm-btn { flex: 1 1 auto; padding: 11px 16px; }
+  .random-page-layout .random-actions .random-view-btn { flex-basis: 100%; }
+  #randomPageAgainBtn { margin-left: 0; }
 }
