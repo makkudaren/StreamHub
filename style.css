@@ -1478,6 +1478,59 @@ main {
 }
 .cast-name{font-size:11px;font-weight:600;line-height:1.3}
 .cast-char{font-size:10px;color:var(--text3)}
+/* ---- Suggestions ("You May Also Like") ----
+   Same block everywhere. Set apart from the main rows on purpose: tinted background, dashed
+   accent outline, a small "Suggestions" label and slightly smaller cards. */
+.suggest-block {
+  margin: 0 40px 52px;
+  padding: 22px 0 4px;
+  border-radius: var(--radius-xl);
+  border: 1px dashed rgba(var(--accent-rgb),0.35);
+  background: linear-gradient(180deg, rgba(var(--accent-rgb),0.08), rgba(var(--accent-rgb),0.02));
+}
+.suggest-block[hidden],
+.hide-suggestions .suggest-block { display: none; }   /* Settings > Show Suggestions off */
+.suggest-inset { margin: 40px 0 0; }                 /* inside pages that already have side padding */
+.suggest-detail { margin: 40px 0 64px; }
+.suggest-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px 16px;
+  flex-wrap: wrap;
+  padding: 0 26px;
+}
+.suggest-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.suggest-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 1.2px;
+  margin-top: 4px;
+  color: var(--text);
+}
+.suggest-sub { font-size: 12.5px; color: var(--text3); }
+.suggest-block .row { padding: 16px 26px 22px; }
+.suggest-block .card { width: 150px; }
+/* Arrows sit on the outline, half outside it, like the home rows (default left/right: -19px) */
+.suggest-block .row-arrow { height: 56px; }
+@media (max-width: 860px) {
+  .suggest-block { margin: 0 16px 36px; padding-top: 18px; }
+  .suggest-inset { margin: 32px 0 0; }
+  .suggest-detail { margin: 32px 0 40px; }
+  .suggest-head { padding: 0 16px; }
+  .suggest-block .row { padding: 12px 16px 18px; }
+  .suggest-block .card { width: 130px; }
+}
 .section-label{font-size:10.5px;text-transform:uppercase;letter-spacing:2.5px;color:var(--text3);font-weight:600;margin-bottom:14px}
 .detail-director-names{font-size:14px;color:var(--text2);font-weight:500;margin-bottom:28px}
 
@@ -1689,12 +1742,17 @@ button, .card, .nav-link, .btn, .row-arrow, .episode-card {
   padding: 6px 10px;
   margin: 0 -10px;
 }
+/* Text side takes the free space and wraps; the switch/button on the right never shrinks */
 .settings-row-left {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex: 1;
   min-width: 0;
 }
+.settings-row-left > div:last-child { min-width: 0; overflow-wrap: anywhere; }
+.settings-row > .switch,
+.settings-row > .settings-data-btn { flex-shrink: 0; }
 .settings-row-icon {
   width: 34px;
   height: 34px;
@@ -1713,25 +1771,19 @@ button, .card, .nav-link, .btn, .row-arrow, .episode-card {
   color: var(--text);
   margin-bottom: 2px;
 }
+/* Descriptions always wrap (never cut off with "...") */
 .settings-row-desc {
   font-size: 12px;
   color: var(--text3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* "Your Data" rows have longer explanations: let them wrap instead of cutting off */
-.settings-row-data { align-items: center; }
-.settings-row-data .settings-row-left { flex: 1; align-items: flex-start; }
-.settings-row-data .settings-row-left > div:last-child { min-width: 0; }
-.settings-row-data .settings-row-icon { flex-shrink: 0; margin-top: 2px; }
-.settings-row-data .settings-row-desc {
-  white-space: normal;
-  overflow: visible;
   line-height: 1.5;
 }
+/* Rows whose text can run to several lines: icon lines up with the title */
+.settings-row-data .settings-row-left { align-items: flex-start; }
+.settings-row-data .settings-row-icon { margin-top: 2px; }
 @media (max-width: 500px) {
-  .settings-row-data { flex-wrap: wrap; }
+  .settings-row-left { align-items: flex-start; }
+  .settings-row-icon { margin-top: 2px; }
+  .settings-row-data:has(.settings-data-btn) { flex-wrap: wrap; }
   .settings-row-data .settings-data-btn { margin-left: 48px; } /* line up under the text */
 }
 .settings-inner-divider {
@@ -1752,6 +1804,7 @@ button, .card, .nav-link, .btn, .row-arrow, .episode-card {
 }
 /* Accent color picker */
 .settings-row-accent { flex-wrap: wrap; gap: 12px; }
+.settings-row-accent .settings-row-left { flex: 1 1 200px; }   /* swatches drop below when tight */
 .accent-swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .accent-swatch {
   position: relative;
@@ -1899,10 +1952,9 @@ input:checked + .slider:before { transform: translateX(22px); }
 .server-row-host {
   font-size: 12px;
   color: var(--text3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;   /* wrap long hosts instead of cutting them off */
 }
+.server-row-name { flex-wrap: wrap; row-gap: 4px; }
 .server-row-radio {
   width: 20px;
   height: 20px;
@@ -1948,7 +2000,10 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 @media(max-width: 700px) {
   .server-list { grid-template-columns: 1fr; }
-  .settings-bottom-row { grid-template-columns: 1fr; }
+}
+/* Two cards side by side get too narrow for the text + switches: stack them sooner */
+@media(max-width: 960px) {
+  .settings-bottom-row { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media(max-width: 860px) {
@@ -1959,6 +2014,12 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 @media(max-width: 560px) {
   .settings-card { padding: 20px 18px; }
+  .settings-page-title { font-size: 32px; }
+  .settings-title-row { gap: 14px; }
+  .settings-icon-wrap { width: 44px; height: 44px; }
+  .settings-icon-wrap svg { width: 22px; height: 22px; }
+  .server-row { padding: 12px 14px; gap: 12px; }
+  .accent-swatches { flex-basis: calc(100% - 48px); margin-left: 48px; }   /* own line, under the "Accent Color" text */
 }
 
 @media(max-width: 860px) {

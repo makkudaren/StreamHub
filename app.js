@@ -3,6 +3,7 @@ const TMDB='https://api.themoviedb.org/3';
 const IMG='https://image.tmdb.org/t/p/';
 // Shared inline icons (same outline style as the rest of the UI; no emoji/text symbols)
 const ICON_STAR='<svg class="icon-star" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+const ICON_SPARKLE='<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z"/></svg>';
 const ICON_SHUFFLE='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>';
 // Accent color (hex, no #). Changeable in Settings; also passed to players that support theming.
 const DEFAULT_ACCENT='e8271a';
@@ -424,6 +425,20 @@ function toggleLowPower(){
   const isTV = tvPattern.test(ua) || (window.innerWidth >= 1200 && !window.matchMedia('(hover: hover)').matches);
   if (isTV) applyLowPower(true);
 })();
+// "Show Suggestions" setting (on by default). Off hides every "You May Also Like" block
+// via a class on <html> and skips fetching them.
+const suggestionsOn=()=>getSaved('sv_show_suggestions',true)!==false;
+document.documentElement.classList.toggle('hide-suggestions',!suggestionsOn());
+function toggleSuggestions(){
+  const on=document.getElementById('suggestionsToggle').checked;
+  setSaved('sv_show_suggestions',on);
+  document.documentElement.classList.toggle('hide-suggestions',!on);
+  const row=document.getElementById('suggestionsRow');
+  if(row) row.setAttribute('aria-checked',on);
+  if(on){ homeSuggestKey=null; refreshHomeSuggestions(); } // others refill when next opened
+  showToast(on?'Suggestions shown':'Suggestions hidden');
+}
+
 let isDark=true;
 function toggleTheme(){
   isDark=!isDark;
@@ -443,6 +458,8 @@ function openSettings() {
   document.getElementById('lowPowerRow').setAttribute('aria-checked', lowPowerOn);
   document.getElementById('blockPopupsToggle').checked = blockPopupsOn();
   document.getElementById('blockPopupsRow').setAttribute('aria-checked', blockPopupsOn());
+  document.getElementById('suggestionsToggle').checked = suggestionsOn();
+  document.getElementById('suggestionsRow').setAttribute('aria-checked', suggestionsOn());
   setPlayer(activePlayer, false);
   renderAccentPicker();
 }
@@ -954,12 +971,133 @@ async function openDetail(id, type, pushState = true){
           </div>`).join('')}
         </div>`;
     }
+    // Suggestions for this title (runs alongside the episodes)
+    showSuggestions('detailSimilar',{seeds:[{id,type}],exclude:[id],sub:`More like ${title}`,
+      fallbackPath:`/${type}/${id}/similar`,fallbackType:type});
     if(type==='tv'){
       await loadSeasons(id,d.seasons||[],d);
     }
   }catch{
     document.getElementById('detailTitle').textContent='Failed to load.';
+    hideSuggestions('detailSimilar');
   }
+}
+
+// ---- Suggestions ("You May Also Like") ----
+// One look everywhere (home, My List / Continue Watching pages, Surprise Me, detail page):
+// a tinted, outlined block labelled "Suggestions", so it reads as extra picks and not a main row.
+// Built from TMDB recommendations for one or more "seed" titles.
+const recsCache=new Map(); // 'movie/123' -> Promise<results[]>
+function getRecs(type,id){
+  const k=`${type}/${id}`;
+  if(!recsCache.has(k)){
+    recsCache.set(k,tmdb(`/${type}/${id}/recommendations`)
+      .then(d=>(d.results||[]).map(r=>({...r,media_type:r.media_type||type})))
+      .catch(()=>{ recsCache.delete(k); return []; }));
+  }
+  return recsCache.get(k);
+}
+// Interleave the recommendations of several seeds, skipping duplicates and excluded IDs
+async function suggestionsFor(seeds,exclude,limit=20){
+  const lists=await Promise.all(seeds.map(s=>getRecs(s.type||'movie',s.id)));
+  const out=[],seen=new Set(exclude);
+  for(let i=0;out.length<limit&&lists.some(l=>i<l.length);i++){
+    for(const l of lists){
+      const r=l[i];
+      if(!r||!r.poster_path||seen.has(String(r.id))) continue;
+      seen.add(String(r.id)); out.push(r);
+      if(out.length>=limit) break;
+    }
+  }
+  return out;
+}
+
+function buildSuggestBlock(el){
+  if(el.dataset.built) return;
+  el.dataset.built='1';
+  const rowId=`${el.id}Row`;
+  el.innerHTML=`
+    <div class="suggest-head">
+      <div>
+        <div class="suggest-eyebrow">${ICON_SPARKLE}Suggestions</div>
+        <h3 class="suggest-title">You May Also Like</h3>
+      </div>
+      <p class="suggest-sub" data-sub></p>
+    </div>
+    <div class="row-wrap">
+      <button class="row-arrow left" onclick="scrollRow('${rowId}',-1)" aria-label="Scroll suggestions left">&#8249;</button>
+      <div class="row" id="${rowId}"></div>
+      <button class="row-arrow right" onclick="scrollRow('${rowId}',1)" aria-label="Scroll suggestions right">&#8250;</button>
+    </div>`;
+}
+
+const suggestTokens={};
+// seeds: [{id,type}] · exclude: IDs not to suggest · sub: small "based on" line
+// fallbackPath/fallbackSub/fallbackType: used when the seeds give nothing
+async function showSuggestions(blockId,{seeds=[],exclude=[],sub='',fallbackPath=null,fallbackSub=null,fallbackType=null}){
+  const el=document.getElementById(blockId);
+  if(!el) return;
+  if(!suggestionsOn()){ hideSuggestions(blockId); return; } // turned off in Settings
+  buildSuggestBlock(el);
+  const token=suggestTokens[blockId]=Symbol();
+  const row=document.getElementById(`${blockId}Row`),subEl=el.querySelector('[data-sub]');
+  const ex=new Set(exclude.map(String));
+  subEl.textContent=sub;
+  el.hidden=false;
+  skeletonRow(row,6);
+  row.scrollLeft=0;
+  let items=[];
+  try{
+    if(seeds.length) items=await suggestionsFor(seeds,ex);
+    if(!items.length&&fallbackPath){
+      const d=await tmdb(fallbackPath);
+      items=(d.results||[])
+        .map(r=>({...r,media_type:r.media_type||fallbackType||'movie'}))
+        .filter(r=>r.poster_path&&!ex.has(String(r.id))&&(r.media_type==='movie'||r.media_type==='tv'))
+        .slice(0,20);
+      if(fallbackSub!==null) subEl.textContent=fallbackSub;
+    }
+  }catch{}
+  if(suggestTokens[blockId]!==token) return; // replaced by a newer request
+  if(!items.length){ el.hidden=true; return; }
+  row.innerHTML=items.map(i=>makeCard(i,i.media_type==='tv'?'tv':'movie')).join('');
+  staggerCards(row);
+}
+function hideSuggestions(blockId){
+  suggestTokens[blockId]=Symbol(); // cancel anything in flight
+  const el=document.getElementById(blockId);
+  if(el) el.hidden=true;
+}
+
+// Home: based on the latest things you watched and saved; popular titles if there's no history.
+// Only reloads when the seeds change (renderRecent runs often while watching).
+let homeSuggestKey=null,homeSuggestTimer=null;
+function refreshHomeSuggestions(){
+  clearTimeout(homeSuggestTimer);
+  homeSuggestTimer=setTimeout(()=>{
+    const recent=getRecent(),list=getMyList();
+    const seeds=[],ids=new Set();
+    for(const i of [...recent.slice(0,3),...list.slice(0,2)]){
+      if(ids.has(String(i.id))) continue;
+      ids.add(String(i.id));
+      seeds.push({id:i.id,type:i.type||'movie',title:i.title});
+    }
+    const exclude=[...recent,...list].map(i=>i.id);
+    const key=seeds.map(s=>`${s.type}${s.id}`).join(',')+'|'+exclude.length;
+    if(key===homeSuggestKey) return;
+    homeSuggestKey=key;
+    const names=seeds.slice(0,2).map(s=>s.title).filter(Boolean);
+    showSuggestions('homeSuggest',{seeds,exclude,
+      sub:names.length?`Based on ${names.join(', ')}${seeds.length>2?' and more':''}`:'',
+      fallbackPath:'/trending/all/week',fallbackSub:'Popular this week'});
+  },50);
+}
+
+// My List / Continue Watching pages: based on the titles on that page
+function showGridSuggestions(items,label){
+  const seeds=items.slice(0,4).map(i=>({id:i.id,type:i.type||'movie'}));
+  if(!seeds.length){ hideSuggestions('gridSuggest'); return; }
+  showSuggestions('gridSuggest',{seeds,exclude:items.map(i=>i.id),sub:`Based on your ${label}`});
 }
 
 let currentSeasons=null;
@@ -1789,6 +1927,7 @@ function renderRecent(){
   const recent=getRecent();
   const section=document.getElementById('recentlyWatched');
   const row=document.getElementById('recentRow');
+  refreshHomeSuggestions();
   if(!recent.length){section.style.display='none';return;}
   section.style.display='block';
   row.innerHTML=recent.map(item => makeRecentCard(item, true)).join('');
@@ -1799,6 +1938,7 @@ function renderMyListRow() {
   const list = getMyList();
   const section = document.getElementById('myListSection');
   const row = document.getElementById('myListRow');
+  refreshHomeSuggestions();
   if(!list.length) { section.style.display='none'; return; }
   section.style.display='block';
   row.innerHTML = list.map(item => makeListCard(item, true)).join('');
@@ -1812,10 +1952,11 @@ function showMyList() {
   const list = getMyList();
   document.getElementById('searchCount').textContent = `${list.length} items`;
   const grid = document.getElementById('searchGrid');
+  setActiveNav(document.getElementById('navList'));
+  showGridSuggestions(list,'list');
   if(!list.length) { grid.innerHTML='<p style="color:var(--text3);padding:20px;grid-column:1/-1">Your list is empty. Start saving some movies or shows!</p>'; return; }
   grid.innerHTML = list.map(item => makeListCard(item, true)).join('');
   staggerCards(grid);
-  setActiveNav(document.getElementById('navList'));
 }
 
 function toggleSearch(){
@@ -1871,10 +2012,12 @@ function stopGridFeed(){
   gridFeed=null;
   document.getElementById('gridLoader')?.remove();
   document.getElementById('gridControls').innerHTML=''; // page-specific controls (e.g. service dropdown)
+  hideSuggestions('gridSuggest'); // only My List / Continue Watching show these
 }
 
 async function startGridFeed(sources,{sortByPopularity=false,onCount=null,emptyText='No results found.',errorText='Failed to load.'}={}){
   document.getElementById('gridControls').innerHTML='';
+  hideSuggestions('gridSuggest');
   const grid=document.getElementById('searchGrid');
   const feed=gridFeed={sources:sources.map(s=>({...s,params:s.params||{},totalPages:1})),page:0,loading:false,done:false,seen:new Set(),sortByPopularity,onCount};
   grid.innerHTML='<div class="loading-center" style="grid-column:1/-1"><div class="spinner"></div></div>';
@@ -2273,6 +2416,10 @@ async function rollRandomPick(view=randomModalView){
       </div>`;
     setRandomButtons(view,true);
     updateRandomListBtn(view);
+    if(view===randomPageView){
+      showSuggestions('randomSuggest',{seeds:[{id:pick.id,type}],exclude:[pick.id],sub:`More like ${title}`,
+        fallbackPath:`/${type}/${pick.id}/similar`,fallbackType:type});
+    }
   }catch{
     if(token!==view.token) return;
     if(backdrop){ backdrop.style.backgroundImage=''; backdrop.classList.remove('is-loading'); }
@@ -2382,9 +2529,10 @@ function showRecent(){
   document.getElementById('searchTitle').textContent='Continue Watching';
   document.getElementById('searchCount').textContent=`${recent.length} items`;
   const grid=document.getElementById('searchGrid');
+  setActiveNav(document.getElementById('navRecent'));
+  showGridSuggestions(recent,'watch history');
   if(!recent.length){grid.innerHTML='<p style="color:var(--text3);padding:20px;grid-column:1/-1">Nothing here yet. Start watching something!</p>';return;}
   grid.innerHTML=recent.map(item => makeRecentCard(item, true)).join('');
-  setActiveNav(document.getElementById('navRecent'));
 }
 
 function removeFromRecent(e, id) {
